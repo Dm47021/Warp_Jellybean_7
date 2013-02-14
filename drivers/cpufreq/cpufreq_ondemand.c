@@ -767,14 +767,6 @@ static DECLARE_WORK(dbs_refresh_work, dbs_refresh_callback);
 static void dbs_input_event(struct input_handle *handle, unsigned int type,
 		unsigned int code, int value)
 {
-#ifdef CONFIG_ZTE_PLATFORM
-	if (!strcmp(handle->dev->name, "compass"))
-		return;
-	#ifdef CONFIG_ZTE_NO_CPUFREQ_ONDEMAND_KEYBOARD	//LHX_PM_20110706_01 not change cpufreq while keyboard input
-	if (strstr(handle->dev->name, "keypad"))
-		return;
-	#endif
-#endif
 	schedule_work_on(0, &dbs_refresh_work);
 }
 
