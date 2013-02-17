@@ -4672,6 +4672,20 @@ static struct msm_gpio lcd_panel_gpios[] = {
 	{ GPIO_CFG(108, 1, GPIO_CFG_OUTPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "lcdc_red6" },
 	{ GPIO_CFG(109, 1, GPIO_CFG_OUTPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_4MA), "lcdc_red7" },
 };
+
+#ifdef CONFIG_MDP4_HW_VSYNC
+static void arthur_te_gpio_config(void)
+{
+  uint32_t te_gpio_table[] = {
+    PCOM_GPIO_CFG(30, 1, GPIO_INPUT, GPIO_PULL_DOWN, GPIO_2MA),
+};
+config_gpio_table(te_gpio_table, ARRAY_SIZE(te_gpio_table));
+}
+#endif
+
+#ifdef CONFIG_MDP4_HW_VSYNC
+  arthur_te_gpio_config();
+#endif
 #if 0		
 
 static struct msm_gpio lcd_sharp_panel_gpios[] = {
