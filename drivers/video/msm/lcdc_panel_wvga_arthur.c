@@ -2811,7 +2811,14 @@ static int  lcdc_panel_probe(struct platform_device *pdev)
 			pinfo->lcdc.h_pulse_width = 5;
 			pinfo->lcdc.v_back_porch = 8;
 			pinfo->lcdc.v_front_porch = 8;
-			pinfo->lcdc.v_pulse_width = 4;
+			pinfo->lcdc.v_pulse_width = 2;
+                      // Vsync Hack part 2
+                      #ifdef CONFIG_FB_MSM_VSYNC_ENABLED
+                        pinfo->lcd.hw_vsync_mode = TRUE;
+                      #else
+                        pinfo->lcd.hw_vsync_mode = FALSE; 
+                      #endif 
+                      // End Vsync hack part 2 
 			pinfo->lcdc.border_clr = 0;	/* blk */
 			pinfo->lcdc.underflow_clr = 0xffff;	/* blue */
 			pinfo->lcdc.hsync_skew = 0;
@@ -2861,6 +2868,13 @@ static int  lcdc_panel_probe(struct platform_device *pdev)
 		pinfo->pdest = DISPLAY_1;
 		pinfo->wait_cycle = 0;
 		pinfo->bpp = 18;
+              // Vsync Hack By Dm47021
+              #ifdef CONFIG_FB_MSM_VSYNC_ENABLED
+                pinfo->lcd.vsync_enable = TRUE;
+              #else
+                pinfo->lcd.vsync_enable = FALSE;
+              #endif
+              // Vsync Hack end part 1
 		pinfo->fb_num = 2;
 		switch(g_lcd_panel_type)
 		{
