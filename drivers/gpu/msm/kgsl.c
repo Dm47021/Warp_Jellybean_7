@@ -1175,7 +1175,7 @@ kgsl_ioctl_sharedmem_from_vmalloc(struct kgsl_device_private *dev_priv,
 	if (result != 0)
 		goto error_free_entry;
 
-	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
 	result = remap_vmalloc_range(vma, (void *) entry->memdesc.hostptr, 0);
 	if (result) {
