@@ -31,13 +31,11 @@
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
-#include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/mm.h>
 #include <linux/fb.h>
 #include "msm_mdp.h"
-#include <linux/init.h>
 #include <linux/ioport.h>
 #include <linux/device.h>
 #include <linux/dma-mapping.h>
@@ -45,7 +43,6 @@
 #include <linux/workqueue.h>
 #include <linux/string.h>
 #include <linux/version.h>
-#include <linux/proc_fs.h>
 #include <linux/vmalloc.h>
 #include <linux/debugfs.h>
 #include <linux/console.h>
@@ -58,7 +55,6 @@
 #include "linux/proc_fs.h"
 #include <mach/hardware.h>
 #include <linux/io.h>
-#include <linux/fb.h>
 #include <asm/system.h>
 #include <asm/mach-types.h>
 #include <linux/platform_device.h>
