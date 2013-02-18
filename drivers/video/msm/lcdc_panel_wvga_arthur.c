@@ -2811,13 +2811,10 @@ static int  lcdc_panel_probe(struct platform_device *pdev)
 			pinfo->lcdc.h_pulse_width = 5;
 			pinfo->lcdc.v_back_porch = 8;
 			pinfo->lcdc.v_front_porch = 8;
-			pinfo->lcdc.v_pulse_width = 2;
+			pinfo->lcdc.v_pulse_width = 4;
                       // Vsync Hack part 2
                       #ifdef CONFIG_FB_MSM_VSYNC_ENABLED
                         pinfo->lcd.hw_vsync_mode = TRUE;
-                        pinfo.lcd.v_back_porch = 11;
-                        pinfo.lcd.v_front_porch = 10;
-                        pinfo.lcd.v_pulse_width = 5;
                       #else
                         pinfo->lcd.hw_vsync_mode = FALSE; 
                       #endif 

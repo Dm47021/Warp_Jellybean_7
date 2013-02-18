@@ -14,3 +14,12 @@ config FB_MSM_LCDC
 	depends on FB_MSM && MSM_MDP31
 	default y
 
+config FB_MSM_VSYNC_ENABLED
+        bool "Enable vsync"
+        depends on EXPERIMENTAL
+        default y
+        help
+          This option enables/disables the vertical syncronisation of the display driver.
+
+ 
+
