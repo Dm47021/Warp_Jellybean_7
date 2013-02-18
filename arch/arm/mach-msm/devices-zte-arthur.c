@@ -23,6 +23,7 @@
 #include <mach/board.h>
 
 #include "devices.h"
+#include <mach/irqs.h>
 #include "clock-7x30.h"
 #include "clock-voter.h"
 #include "clock-pcom.h"
