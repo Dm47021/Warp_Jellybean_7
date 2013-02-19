@@ -1922,6 +1922,7 @@ int mdp4_overlay_unset(struct fb_info *info, int ndx)
 	if (pipe->mixer_num == MDP4_MIXER0) {
 #ifdef CONFIG_FB_MSM_MIPI_DSI
 		if (ctrl->panel_mode & MDP4_PANEL_DSI_CMD) {
+                    mdp4_overlay_dsi_video_set_perf(mfd);
 			if (mfd->panel_power_on)
 				if (mdp4_dsi_overlay_blt_stop(mfd) == 0)
 					mdp4_dsi_cmd_overlay_restore();
