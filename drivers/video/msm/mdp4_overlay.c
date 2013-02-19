@@ -1927,6 +1927,11 @@ int mdp4_overlay_unset(struct fb_info *info, int ndx)
 			if (mfd->panel_power_on)
 				if (mdp4_dsi_overlay_blt_stop(mfd) == 0)
 					mdp4_dsi_cmd_overlay_restore();
+                                } else if (ctrl->panel_mode & MDP4_PANEL_DSI_VIDEO) {
+                                  pipe->flags &= ~MDP_OV_PLAY_NOWAIT;
+                                  if (mfd->panel_power_on)
+                                    mdp4_overlay_dsi_video_vsync_push(mfd,
+                                              pipe);
 		}
 #else
 		if (ctrl->panel_mode & MDP4_PANEL_MDDI) {
