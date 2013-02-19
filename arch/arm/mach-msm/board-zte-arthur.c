@@ -146,7 +146,15 @@ extern struct atmel_i2c_platform_data atmel_data;
 #define MSM_RAM_CONSOLE_PHYS  0x3D00000 //// Change memory map for kernel 4M alignment , ZTE_BOOT_LIWEI_20110824
 #define MSM_RAM_CONSOLE_SIZE  SZ_1M
 #endif
+/* ##### USB G ANDROID HACK begin ###### */
 
+#include <linux/slab.h>
+#ifdef CONFIG_USB_G_ANDROID
+#include <linux/usb/android.h>
+#include <mach/usbdiag.h>
+#endif
+
+/* ##### End ##### */
 static smem_global *global;
 
 
@@ -251,7 +259,7 @@ static int pm8058_gpios_init(void)
 	return 0;
 }
 
-/*virtual key support */
+/* virtual key support */
 #if 0
 static ssize_t tma300_vkeys_show(struct kobject *kobj,
 			struct kobj_attribute *attr, char *buf)
@@ -3291,7 +3299,7 @@ static void msm7x30_cfg_smsc911x(void)
 		pr_err("%s: unable to enable gpios\n", __func__);
 }
 
-#ifdef CONFIG_USB_FUNCTION
+/* #ifdef CONFIG_USB_FUNCTION
 static struct usb_mass_storage_platform_data usb_mass_storage_pdata = {
 	.nluns          = 0x02,
 	.buf_size       = 16384,
@@ -3308,8 +3316,9 @@ static struct platform_device mass_storage_device = {
 	},
 };
 #endif
+*/
 
-#ifdef CONFIG_USB_ANDROID
+/* #ifdef CONFIG_USB_ANDROID
 #if 0
 static char *usb_functions_default[] = {
 	"diag",
@@ -3408,11 +3417,11 @@ static struct platform_device usb_mass_storage_device = {
 
 #if 0
 static struct usb_ether_platform_data rndis_pdata = {
-	/* ethaddr is filled by board_serialno_setup */
+	
 	.vendorID	= 0x05C6,
 	.vendorDescr	= "Qualcomm Incorporated",
 };
-	/* ethaddr is filled by board_serialno_setup */
+	
 #endif
 static struct platform_device rndis_device = {
 	.name	= "rndis",
@@ -3421,6 +3430,7 @@ static struct platform_device rndis_device = {
 		.platform_data = &rndis_pdata,
 	},
 };
+
 
 #if 0
 static struct android_usb_platform_data android_usb_pdata = {
@@ -3443,18 +3453,31 @@ static struct platform_device android_usb_device = {
 		.platform_data = &android_usb_pdata,
 	},
 };
+*/
 
+#ifdef CONFIG_USB_G_ANDROID
+static struct android_usb_platform_data android_usb_pdata = {
+        .update_pid_and_serial_num = usb_diag_update_pid_and_serial_num,
+};
+
+static struct platform_device android_usb_device = {
+        .name       = "android_usb",
+        .id         = -1,
+        .dev        = {
+                .platform_data = &android_usb_pdata,
+        },
+};
+#endif
+
+/*
 static int __init board_serialno_setup(char *serialno)
 {
 	int i;
 	char *src = serialno;
 
-	/* create a fake MAC address from our serial number.
-	 * first byte is 0x02 to signify locally administered.
-	 */
+	
 	rndis_pdata.ethaddr[0] = 0x02;
 	for (i = 0; *src; i++) {
-		/* XOR the USB serial across the remaining bytes */
 		rndis_pdata.ethaddr[i % (ETH_ALEN - 1) + 1] ^= *src++;
 	}
 
@@ -3463,7 +3486,7 @@ static int __init board_serialno_setup(char *serialno)
 }
 __setup("androidboot.serialno=", board_serialno_setup);
 #endif
-
+*/
 
 static struct i2c_board_info msm_i2c_board_info[] = {
 	{
@@ -5407,17 +5430,18 @@ static struct platform_device *devices[] __initdata = {
 	&smc91x_device,
 	&smsc911x_device,
 	&msm_device_nand,
-#ifdef CONFIG_USB_FUNCTION
+/* #ifdef CONFIG_USB_FUNCTION
 	&msm_device_hsusb_peripheral,
 	&mass_storage_device,
 #endif
+*/
 #ifdef CONFIG_USB_MSM_OTG_72K
 	&msm_device_otg,
 #ifdef CONFIG_USB_GADGET
 	&msm_device_gadget_peripheral,
 #endif
 #endif
-#ifdef CONFIG_USB_ANDROID
+/* #ifdef CONFIG_USB_ANDROID
 	&usb_mass_storage_device,
 	&rndis_device,
 #ifdef CONFIG_USB_ANDROID_DIAG
@@ -5425,6 +5449,13 @@ static struct platform_device *devices[] __initdata = {
 #endif
 	&android_usb_device,
 #endif
+*/
+
+/* dtm/dm usb */
+#ifdef CONFIG_USB_G_ANDROID
+        &android_usb_device,
+#endif
+
 	&qsd_device_spi,
 #ifdef CONFIG_I2C_SSBI
 	&msm_device_ssbi6,

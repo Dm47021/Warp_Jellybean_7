@@ -619,9 +619,12 @@ int diag_function_add(struct usb_configuration *c)
 #else
 int diag_function_add(struct usb_configuration *c, struct diag_context *dev)
 {
+//	struct diag_context *dev;
 	struct usb_diag_ch *_ch = &dev->ch;
 	int  ret;
+
 	DBG(c->cdev, "diag_function_add\n");
+
 	dev->cdev = c->cdev;
 	dev->function.name = _ch->name;
 	dev->function.descriptors = fs_diag_desc;
@@ -634,14 +637,17 @@ int diag_function_add(struct usb_configuration *c, struct diag_context *dev)
 	INIT_LIST_HEAD(&dev->read_pool);
 	INIT_LIST_HEAD(&dev->write_pool);
 	INIT_WORK(&dev->config_work, usb_config_work_func);
+
 	ret = usb_add_function(c, &dev->function);
 	if (ret) {
 		INFO(c->cdev, "usb_add_function failed\n");
 		_ch->priv_usb = NULL;
 	}
+
 	return ret;
 }
 #endif
+
 static struct
 usb_diag_ch *diag_setup(struct usb_diag_platform_data *pdata)
 {
@@ -732,7 +738,10 @@ static int __init usb_diag_init(void)
 module_init(usb_diag_init);
 
 #else
+
+
 #endif
+
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("usb diag gadget driver");
 MODULE_VERSION("2.00");

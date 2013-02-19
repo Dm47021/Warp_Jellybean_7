@@ -737,7 +737,7 @@ int fserial_nmea_bind_config(struct usb_configuration *c)
 {
 	return gser_bind_config(c, 1);
 }
-
+ 
 static struct android_usb_function nmea_function = {
 	.name = "nmea",
 	.bind_config = fserial_nmea_bind_config,
@@ -759,6 +759,8 @@ int fserial_modem_bind_config(struct usb_configuration *c)
 
 int fserial_modem_unbind_config(struct usb_configuration *c)
 {
+	
+
 	/* See if composite driver can allocate
 	 * serial ports. But for now allocate
 	 * two ports for modem and nmea.
@@ -766,15 +768,19 @@ int fserial_modem_unbind_config(struct usb_configuration *c)
 	gserial_cleanup();
 	return 0;
 }
+
+
 static struct android_usb_function modem_function = {
 	.name = "modem",
 	.bind_config = fserial_modem_bind_config,
 	.unbind_config = fserial_modem_unbind_config,
 };
 
+
 static int __init init(void)
 {
 	printk(KERN_INFO "f_serial init\n");
+
 	android_register_function(&modem_function);
 	android_register_function(&nmea_function);
 	return 0;
