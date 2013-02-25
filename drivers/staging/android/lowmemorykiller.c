@@ -35,6 +35,8 @@
 #include <linux/oom.h>
 #include <linux/sched.h>
 #include <linux/notifier.h>
+#include <linux/memory.h>
+#include <linux/memory_hotplug.h>
 
 static uint32_t lowmem_debug_level = 2;
 static int lowmem_adj[6] = {
@@ -52,8 +54,9 @@ static size_t lowmem_minfree[6] = {
 };
 static int lowmem_minfree_size = 4;
 
+static unsigned int offlining;
 static struct task_struct *lowmem_deathpending;
-static DEFINE_SPINLOCK(lowmem_deathpending_lock);
+static unsigned long lowmem_deathpending_timeout;
 
 #define lowmem_print(level, x...)			\
 	do {						\
@@ -68,28 +71,42 @@ static struct notifier_block task_nb = {
 	.notifier_call	= task_notify_func,
 };
 
-
-static void task_free_fn(struct work_struct *work)
-{
-	unsigned long flags;
-
-	task_free_unregister(&task_nb);
-	spin_lock_irqsave(&lowmem_deathpending_lock, flags);
-	lowmem_deathpending = NULL;
-	spin_unlock_irqrestore(&lowmem_deathpending_lock, flags);
-}
-static DECLARE_WORK(task_free_work, task_free_fn);
-
 static int
 task_notify_func(struct notifier_block *self, unsigned long val, void *data)
 {
 	struct task_struct *task = data;
 
-	if (task == lowmem_deathpending) {
-		schedule_work(&task_free_work);
-	}
+	if (task == lowmem_deathpending)
+		lowmem_deathpending = NULL;
+
 	return NOTIFY_OK;
 }
+
+#ifdef CONFIG_MEMORY_HOTPLUG
+static int lmk_hotplug_callback(struct notifier_block *self,
+				unsigned long cmd, void *data)
+{
+	switch (cmd) {
+	/* Don't care LMK cases */
+	case MEM_ONLINE:
+	case MEM_OFFLINE:
+	case MEM_CANCEL_ONLINE:
+	case MEM_CANCEL_OFFLINE:
+	case MEM_GOING_ONLINE:
+		offlining = 0;
+		lowmem_print(4, "lmk in normal mode\n");
+		break;
+	/* LMK should account for movable zone */
+	case MEM_GOING_OFFLINE:
+		offlining = 1;
+		lowmem_print(4, "lmk in hotplug mode\n");
+		break;
+	}
+	return NOTIFY_DONE;
+}
+#endif
+
+
 
 static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 {
@@ -103,9 +120,22 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 	int selected_oom_adj;
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free = global_page_state(NR_FREE_PAGES);
-	int other_file = global_page_state(NR_FILE_PAGES);
-	unsigned long flags;
+	int other_file = global_page_state(NR_FILE_PAGES) -
+						global_page_state(NR_SHMEM);
+	struct zone *zone;
 
+	if (offlining) {
+		/* Discount all free space in the section being offlined */
+		for_each_zone(zone) {
+			 if (zone_idx(zone) == ZONE_MOVABLE) {
+				other_free -= zone_page_state(zone,
+						NR_FREE_PAGES);
+				lowmem_print(4, "lowmem_shrink discounted "
+					"%lu pages in movable zone\n",
+					zone_page_state(zone, NR_FREE_PAGES));
+			}
+		}
+	}
 	/*
 	 * If we already have a death outstanding, then
 	 * bail out right away; indicating to vmscan
@@ -113,7 +143,8 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 	 * this pass.
 	 *
 	 */
-	if (lowmem_deathpending)
+	if (lowmem_deathpending &&
+	    time_before_eq(jiffies, lowmem_deathpending_timeout))
 		return 0;
 
 	if (lowmem_adj_size < array_size)
@@ -121,7 +152,8 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 	if (lowmem_minfree_size < array_size)
 		array_size = lowmem_minfree_size;
 	for (i = 0; i < array_size; i++) {
-		if (other_file < lowmem_minfree[i]) {
+		if (other_free < lowmem_minfree[i] &&
+		    other_file < lowmem_minfree[i]) {
 			min_adj = lowmem_adj[i];
 			break;
 		}
@@ -176,20 +208,14 @@ static int lowmem_shrink(struct shrinker *s, int nr_to_scan, gfp_t gfp_mask)
 		lowmem_print(2, "select %d (%s), adj %d, size %d, to kill\n",
 			     p->pid, p->comm, oom_adj, tasksize);
 	}
-
 	if (selected) {
-		spin_lock_irqsave(&lowmem_deathpending_lock, flags);
-		if (!lowmem_deathpending) {
-			lowmem_print(1,
-				"send sigkill to %d (%s), adj %d, size %d\n",
-				selected->pid, selected->comm,
-				selected_oom_adj, selected_tasksize);
-			lowmem_deathpending = selected;
-			task_free_register(&task_nb);
-			force_sig(SIGKILL, selected);
-			rem -= selected_tasksize;
-		}
-		spin_unlock_irqrestore(&lowmem_deathpending_lock, flags);
+		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d\n",
+			     selected->pid, selected->comm,
+			     selected_oom_adj, selected_tasksize);
+		lowmem_deathpending = selected;
+		lowmem_deathpending_timeout = jiffies + HZ;
+		force_sig(SIGKILL, selected);
+		rem -= selected_tasksize;
 	}
 	lowmem_print(4, "lowmem_shrink %d, %x, return %d\n",
 		     nr_to_scan, gfp_mask, rem);
@@ -204,13 +230,18 @@ static struct shrinker lowmem_shrinker = {
 
 static int __init lowmem_init(void)
 {
+	task_free_register(&task_nb);
 	register_shrinker(&lowmem_shrinker);
+#ifdef CONFIG_MEMORY_HOTPLUG
+	hotplug_memory_notifier(lmk_hotplug_callback, 0);
+#endif
 	return 0;
 }
 
 static void __exit lowmem_exit(void)
 {
 	unregister_shrinker(&lowmem_shrinker);
+	task_free_unregister(&task_nb);
 }
 
 module_param_named(cost, lowmem_shrinker.seeks, int, S_IRUGO | S_IWUSR);
