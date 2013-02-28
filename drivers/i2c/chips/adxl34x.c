@@ -412,6 +412,10 @@ static int adxl34x_get_triple(short *buffer)
 	buffer[0] = (s16) le16_to_cpu(buf[1])*4;
 	buffer[1] = (s16) le16_to_cpu(buf[0])*4;
 	buffer[2] = (s16) le16_to_cpu(buf[2])*4;
+#elif defined(CONFIG_MACH_SKATEPLUS)
+        buffer[0] = (s16) le16_to_cpu(buf[1])*(-1)*4;
+        buffer[1] = (s16) le16_to_cpu(buf[0])*(-1)*4;
+        buffer[2] = (s16) le16_to_cpu(buf[2])*4;
 #else
 	buffer[0] = (s16) le16_to_cpu(buf[1])*4;
 	buffer[1] = (s16) le16_to_cpu(buf[0])*4;
@@ -803,7 +807,7 @@ static int adxl34x_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int adxl34x_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
+static long adxl34x_ioctl(struct file *file, unsigned int cmd,
 	   unsigned long arg)
 {
 
@@ -882,7 +886,13 @@ static int adxl34x_ioctl(struct inode *inode, struct file *file, unsigned int cm
 
 static void adxl34x_early_suspend(struct early_suspend *handler)
 {
-	int ret = adxl34x_set_mode(0);
+	int ret; 
+#if defined(CONFIG_MACH_BLADEPLUS)
+	ret = adxl34x_set_mode(0);
+#else
+	ret = adxl34x_set_mode(1);
+#endif
+
 	if(!ret)
 		pr_info(ADXL34X_TAG "adxl34x suspend\n");
 	else
@@ -890,12 +900,21 @@ static void adxl34x_early_suspend(struct early_suspend *handler)
 }
 static void adxl34x_late_resume(struct early_suspend *handler)
 {
-	int ret = adxl34x_set_mode(1);
+#if defined(CONFIG_MACH_BLADEPLUS) 
+	int ret = adxl34x_set_mode(1);  
 
 	if(!ret)
 		pr_info(ADXL34X_TAG "adxl34x resume\n");
 	else
 		pr_err(ADXL34X_TAG "adxl34x resume failed \n");
+#else
+	//int ret = adxl34x_set_mode(1);  
+
+	//if(!ret)
+		pr_info(ADXL34X_TAG "adxl34x resume\n");
+	//else
+	//	pr_err(ADXL34X_TAG "adxl34x resume failed \n");
+#endif
 
 }
 
@@ -903,7 +922,7 @@ static struct file_operations adxl34x_fops = {
 	.owner = THIS_MODULE,
 	.open = adxl34x_open,
 	.release = adxl34x_release,
-	.ioctl = adxl34x_ioctl,
+	.unlocked_ioctl = adxl34x_ioctl,
 };
 
 static struct miscdevice adxl34x_device = {
