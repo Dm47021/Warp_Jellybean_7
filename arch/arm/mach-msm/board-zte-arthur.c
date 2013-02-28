@@ -673,7 +673,7 @@ static struct platform_device msm_device_pmic_leds = {
 static struct pmic8058_led pmic8058_ffa_leds[] = {
 	[0] = {
 		.name		= "keyboard-backlight",
-		.max_brightness = 15,
+		.max_brightness = 20,
 		.id		= PMIC8058_ID_LED_KB_LIGHT,
 	},
 };
@@ -686,7 +686,7 @@ static struct pmic8058_leds_platform_data pm8058_ffa_leds_data = {
 static struct pmic8058_led pmic8058_surf_leds[] = {
 	[0] = {
 		.name		= "keyboard-backlight",
-		.max_brightness = 15,
+		.max_brightness = 20,
 		.id		= PMIC8058_ID_LED_KB_LIGHT,
 	},
 	[1] = {
