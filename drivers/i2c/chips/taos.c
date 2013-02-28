@@ -112,7 +112,7 @@ static int taos_probe(struct i2c_client *clientp, const struct i2c_device_id *id
 static int taos_remove(struct i2c_client *client);
 static int taos_open(struct inode *inode, struct file *file);
 static int taos_release(struct inode *inode, struct file *file);
-static int taos_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg);
+static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
 static int taos_read(struct file *file, char *buf, size_t count, loff_t *ppos);
 static int taos_write(struct file *file, const char *buf, size_t count, loff_t *ppos);
 static loff_t taos_llseek(struct file *file, loff_t offset, int orig);
@@ -212,7 +212,7 @@ static struct file_operations taos_fops = {
 	.read = taos_read,
 	.write = taos_write,
 	.llseek = taos_llseek,
-	.ioctl = taos_ioctl,
+	.unlocked_ioctl = taos_ioctl,
 };
 
 // device configuration
@@ -240,7 +240,7 @@ static u16 gain_trim_param = 5;
 static u16 prox_threshold_hi_param = 1023; 
 static u16 prox_threshold_lo_param = 818;
 #else
-static u16 gain_trim_param = 25; //this value is set according to specific device
+static u16 gain_trim_param = 75; //this value is set according to specific device
 
 static u16 prox_threshold_hi_param = 1023; 
 static u16 prox_threshold_lo_param = 818;
@@ -466,7 +466,7 @@ static void taos_report_value(int mask)
 	int  dist;
 	lux_val/=taos_cfgp->gain_trim;	
 
-	if (mask==0) {
+	if (( mask == 0 ) && ((lux_val < 95) || (lux_val >130))) {
 		input_report_abs(light->input_dev, ABS_MISC, lux_val);
 //[sensor wlg 20110729]ALS thereshold modify add log
 // 		printk(KERN_CRIT "TAOS: als_interrupt lux_val(%d)=g_nlux(%d)/taos_cfgp->gain_trim(%d)\n", lux_val, g_nlux, taos_cfgp->gain_trim);
@@ -541,7 +541,7 @@ static void __exit taos_exit(void) {
 	.owner = THIS_MODULE,
 	.open = taos_open,
 	.release = taos_release,
-	.ioctl = taos_ioctl,
+	.unlocked_ioctl = taos_ioctl,
 };
 
 
@@ -1026,7 +1026,7 @@ static int enable_light_and_proximity(int mask)
 }
 
 // ioctls
-static int taos_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg) {
+static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
 	struct taos_data *taos_datap;
 	int prox_sum = 0, prox_mean = 0, prox_max = 0;
 	int lux_val = 0, ret = 0, i = 0, tmp = 0;
@@ -1035,7 +1035,7 @@ static int taos_ioctl(struct inode *inode, struct file *file, unsigned int cmd, 
 	int count=0;
 	struct prox_data *prox_pt;
 	u16 ratio;
-	taos_datap = container_of(inode->i_cdev, struct taos_data, cdev);
+	taos_datap = container_of(file->f_dentry->d_inode->i_cdev, struct taos_data, cdev);
 //[sensor wlg 20110729]ALS thereshold modify add log
 //printk(KERN_ERR "TAOS_wlg: taos_ioctl() cmd=%d\n", cmd);
 	switch (cmd) {
