@@ -344,7 +344,7 @@ static int lis302dl_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int lis302dl_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
+static long lis302dl_ioctl(struct file *file, unsigned int cmd,
 	   unsigned long arg)
 {
 
@@ -423,7 +423,14 @@ static int lis302dl_ioctl(struct inode *inode, struct file *file, unsigned int c
 
 static void lis302dl_early_suspend(struct early_suspend *handler)
 {
-	int ret = lis302dl_set_mode(0);
+	int ret;
+	
+#if defined(CONFIG_MACH_BLADEPLUS)
+	ret = lis302dl_set_mode(0);
+#else
+	ret = lis302dl_set_mode(1);
+#endif
+
 	if(!ret)
 		pr_info(LIS302_TAG "lis302dl suspend\n");
 	else
@@ -433,12 +440,21 @@ static void lis302dl_early_suspend(struct early_suspend *handler)
 
 static void lis302dl_late_resume(struct early_suspend *handler)
 {
-	int ret = lis302dl_set_mode(1);
+#if defined(CONFIG_MACH_BLADEPLUS) 
+	int ret = lis302dl_set_mode(1);    
 
 	if(!ret)
 		pr_info(LIS302_TAG "lis302dl resume\n");
 	else
 		pr_err(LIS302_TAG "lis302dl resume failed \n");
+#else
+	//int ret = lis302dl_set_mode(1);   
+
+	//if(!ret)
+		pr_info(LIS302_TAG "lis302dl resume\n");
+	//else
+	//	pr_err(LIS302_TAG "lis302dl resume failed \n");
+#endif
 
 }
 
@@ -446,7 +462,7 @@ static struct file_operations lis302dl_fops = {
 	.owner = THIS_MODULE,
 	.open = lis302dl_open,
 	.release = lis302dl_release,
-	.ioctl = lis302dl_ioctl,
+	.unlocked_ioctl = lis302dl_ioctl,
 };
 
 static struct miscdevice lis302dl_device = {
