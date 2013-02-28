@@ -61,6 +61,11 @@ struct ov5640_reg_t {
     uint16_t preview2snapshot_size;    
     struct ov5640_i2c_reg_conf const *autofocus_reg_settings;
     uint16_t autofocus_reg_settings_size;
+    struct ov5640_i2c_reg_conf const *lens_shading_D65_tbl;
+    uint16_t lens_shading_D65_tbl_size;
+	  struct ov5640_i2c_reg_conf const *lens_shading_A_tbl;
+    uint16_t lens_shading_A_tbl_size; 
+
 };
 
 #endif /* OV5640_H */
