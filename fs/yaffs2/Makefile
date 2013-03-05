@@ -6,7 +6,7 @@ obj-$(CONFIG_YAFFS_FS) += yaffs.o
 
 yaffs-y := yaffs_ecc.o yaffs_fs.o yaffs_guts.o yaffs_checkptrw.o
 
-CFLAGS_REMOVE_yaffs_guts.o = -Werror
+# CFLAGS_REMOVE_yaffs_guts.o = -Werror
 
 yaffs-y += yaffs_packedtags1.o yaffs_packedtags2.o yaffs_nand.o yaffs_qsort.o
 yaffs-y += yaffs_tagscompat.o yaffs_tagsvalidity.o

@@ -13,7 +13,7 @@ drm-y       :=	drm_auth.o drm_buffer.o drm_bufs.o drm_cache.o \
 		drm_crtc.o drm_modes.o drm_edid.o \
 		drm_info.o drm_debugfs.o drm_encoder_slave.o
 
-CFLAGS_REMOVE_drm_edid.o = -Werror
+# CFLAGS_REMOVE_drm_edid.o = -Werror
 
 drm-$(CONFIG_COMPAT) += drm_ioc32.o
 

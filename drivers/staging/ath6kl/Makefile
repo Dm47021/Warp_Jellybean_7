@@ -128,7 +128,7 @@ ccflags-y += -DWLAN_HEADERS
 ccflags-y += -DINIT_MODE_DRV_ENABLED
 ccflags-y += -DBMIENABLE_SET
 
-CFLAGS_REMOVE_ioctl.o = -Werror
+# CFLAGS_REMOVE_ioctl.o = -Werror
 
 obj-$(CONFIG_ATH6K_LEGACY) := ath6kl.o
 ath6kl-y += htc2/AR6000/ar6k.o

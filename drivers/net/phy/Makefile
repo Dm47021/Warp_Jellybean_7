@@ -23,4 +23,4 @@ obj-$(CONFIG_STE10XP)		+= ste10Xp.o
 obj-$(CONFIG_MICREL_PHY)	+= micrel.o
 obj-$(CONFIG_MDIO_OCTEON)	+= mdio-octeon.o
 
-CFLAGS_REMOVE_smsc.o = -Werror
+# CFLAGS_REMOVE_smsc.o = -Werror
