@@ -525,12 +525,12 @@ void mdp4_dma_p_done_dsi_video(void)
  */
 void mdp4_overlay0_done_dsi_video(struct mdp_dma_data *dma)
 {
-        spin_lock(&mdp_spin_lock);
+        spin_lock_irqsave(&mdp_spin_lock, flag);
         dma->busy = FALSE;
         mdp4_dsi_video_blt_dmap_update(dsi_pipe);
         dsi_pipe->dmap_cnt++;
         mdp_disable_irq_nosync(MDP_OVERLAY0_TERM);
-        spin_unlock(&mdp_spin_lock);
+        spin_unlock_irqrestore(&mdp_spin_lock, flag);
         complete(&dma->comp);
 }
 
