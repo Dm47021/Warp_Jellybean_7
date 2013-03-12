@@ -75,4 +75,3 @@ void kgsl_pwrscale_policy_remove_files(struct kgsl_device *device,
 				       struct kgsl_pwrscale *pwrscale,
 				       struct attribute_group *attr_group);
 #endif
-

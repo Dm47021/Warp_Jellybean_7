@@ -26,17 +26,10 @@
 #define KGSL_FLAGS_RESERVED2   0x00000080
 #define KGSL_FLAGS_SOFT_RESET  0x00000100
 
-/*
- * Reset status values for context
- */
-enum kgsl_ctx_reset_stat {
-	KGSL_CTX_STAT_NO_ERROR				= 0x00000000,
-	KGSL_CTX_STAT_GUILTY_CONTEXT_RESET_EXT		= 0x00000001,
-	KGSL_CTX_STAT_INNOCENT_CONTEXT_RESET_EXT	= 0x00000002,
-	KGSL_CTX_STAT_UNKNOWN_CONTEXT_RESET_EXT		= 0x00000003
-};
-
 #define KGSL_MAX_PWRLEVELS 5
+
+#define KGSL_CONVERT_TO_MBPS(val) \
+	(val*1000*1000U)
 
 /* device id */
 enum kgsl_deviceid {
@@ -51,6 +44,7 @@ enum kgsl_user_mem_type {
 	KGSL_USER_MEM_TYPE_ASHMEM	= 0x00000001,
 	KGSL_USER_MEM_TYPE_ADDR		= 0x00000002,
 	KGSL_USER_MEM_TYPE_ION		= 0x00000003,
+	KGSL_USER_MEM_TYPE_MAX		= 0x00000004,
 };
 
 struct kgsl_devinfo {
@@ -108,7 +102,6 @@ enum kgsl_property_type {
 	KGSL_PROP_MMU_ENABLE 	  = 0x00000006,
 	KGSL_PROP_INTERRUPT_WAITS = 0x00000007,
 	KGSL_PROP_VERSION         = 0x00000008,
-	KGSL_PROP_GPU_RESET_STAT  = 0x00000009
 };
 
 struct kgsl_shadowprop {
@@ -150,10 +143,8 @@ struct kgsl_device_pwr_data {
 	int num_levels;
 	int (*set_grp_async)(void);
 	unsigned int idle_timeout;
-	bool strtstp_sleepwake;
 	unsigned int nap_allowed;
 	unsigned int idle_needed;
-	unsigned int idle_pass;
 };
 
 struct kgsl_clk_data {

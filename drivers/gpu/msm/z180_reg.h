@@ -47,4 +47,3 @@
 #define ADDR_VGV3_WRITEADDR              0x0072
 
 #endif /* __Z180_REG_H */
-

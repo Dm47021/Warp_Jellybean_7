@@ -1,4 +1,4 @@
-/* Copyright (c) 2002,2007-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2002,2007-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -12,6 +12,14 @@
  */
 #ifndef __KGSL_MMU_H
 #define __KGSL_MMU_H
+
+/*
+ * These defines control the split between ttbr1 and ttbr0 pagetables of IOMMU
+ * and what ranges of memory we map to them
+ */
+#define KGSL_IOMMU_GLOBAL_MEM_BASE	0xC0000000
+#define KGSL_IOMMU_GLOBAL_MEM_SIZE	SZ_4M
+#define KGSL_IOMMU_TTBR1_SPLIT		2
 
 #define KGSL_MMU_ALIGN_SHIFT    13
 #define KGSL_MMU_ALIGN_MASK     (~((1 << KGSL_MMU_ALIGN_SHIFT) - 1))
@@ -76,16 +84,10 @@ struct kgsl_device;
 #define MH_INTERRUPT_MASK__AXI_WRITE_ERROR                 0x00000002L
 #define MH_INTERRUPT_MASK__MMU_PAGE_FAULT                  0x00000004L
 
-#ifdef CONFIG_MSM_KGSL_MMU
 #define KGSL_MMU_INT_MASK \
 	(MH_INTERRUPT_MASK__AXI_READ_ERROR | \
 	 MH_INTERRUPT_MASK__AXI_WRITE_ERROR | \
 	 MH_INTERRUPT_MASK__MMU_PAGE_FAULT)
-#else
-#define KGSL_MMU_INT_MASK \
-	(MH_INTERRUPT_MASK__AXI_READ_ERROR | \
-	 MH_INTERRUPT_MASK__AXI_WRITE_ERROR)
-#endif
 
 enum kgsl_mmutype {
 	KGSL_MMU_TYPE_GPU = 0,
@@ -98,6 +100,7 @@ struct kgsl_pagetable {
 	struct kref refcount;
 	unsigned int   max_entries;
 	struct gen_pool *pool;
+	struct gen_pool *kgsl_pool;
 	struct list_head list;
 	unsigned int name;
 	struct kobject *kobj;
@@ -109,35 +112,37 @@ struct kgsl_pagetable {
 		unsigned int max_entries;
 	} stats;
 	const struct kgsl_mmu_pt_ops *pt_ops;
+	unsigned int tlb_flags;
 	void *priv;
 };
 
+struct kgsl_mmu;
+
 struct kgsl_mmu_ops {
-	int (*mmu_init) (struct kgsl_device *device);
-	int (*mmu_close) (struct kgsl_device *device);
-	int (*mmu_start) (struct kgsl_device *device);
-	int (*mmu_stop) (struct kgsl_device *device);
-	void (*mmu_setstate) (struct kgsl_device *device,
+	int (*mmu_init) (struct kgsl_mmu *mmu);
+	int (*mmu_close) (struct kgsl_mmu *mmu);
+	int (*mmu_start) (struct kgsl_mmu *mmu);
+	int (*mmu_stop) (struct kgsl_mmu *mmu);
+	void (*mmu_setstate) (struct kgsl_mmu *mmu,
 		struct kgsl_pagetable *pagetable);
-	void (*mmu_device_setstate) (struct kgsl_device *device,
+	void (*mmu_device_setstate) (struct kgsl_mmu *mmu,
 					uint32_t flags);
-	void (*mmu_pagefault) (struct kgsl_device *device);
+	void (*mmu_pagefault) (struct kgsl_mmu *mmu);
 	unsigned int (*mmu_get_current_ptbase)
-			(struct kgsl_device *device);
+			(struct kgsl_mmu *mmu);
 };
 
 struct kgsl_mmu_pt_ops {
 	int (*mmu_map) (void *mmu_pt,
 			struct kgsl_memdesc *memdesc,
-			unsigned int protflags);
+			unsigned int protflags,
+			unsigned int *tlb_flags);
 	int (*mmu_unmap) (void *mmu_pt,
 			struct kgsl_memdesc *memdesc);
 	void *(*mmu_create_pagetable) (void);
 	void (*mmu_destroy_pagetable) (void *pt);
 	int (*mmu_pt_equal) (struct kgsl_pagetable *pt,
 			unsigned int pt_base);
-	unsigned int (*mmu_pt_get_flags) (struct kgsl_pagetable *pt,
-				enum kgsl_deviceid id);
 };
 
 struct kgsl_mmu {
@@ -174,21 +179,20 @@ int kgsl_mmu_map_global(struct kgsl_pagetable *pagetable,
 int kgsl_mmu_unmap(struct kgsl_pagetable *pagetable,
 		    struct kgsl_memdesc *memdesc);
 unsigned int kgsl_virtaddr_to_physaddr(void *virtaddr);
-void kgsl_setstate(struct kgsl_device *device, uint32_t flags);
+void kgsl_setstate(struct kgsl_mmu *mmu, uint32_t flags);
 void kgsl_mmu_device_setstate(struct kgsl_device *device, uint32_t flags);
 void kgsl_mmu_setstate(struct kgsl_device *device,
 			struct kgsl_pagetable *pt);
 int kgsl_mmu_get_ptname_from_ptbase(unsigned int pt_base);
 int kgsl_mmu_pt_get_flags(struct kgsl_pagetable *pt,
 			enum kgsl_deviceid id);
-
 void kgsl_mmu_ptpool_destroy(void *ptpool);
-void *kgsl_mmu_ptpool_init(int ptsize, int entries);
+void *kgsl_mmu_ptpool_init(int entries);
 int kgsl_mmu_enabled(void);
 int kgsl_mmu_pt_equal(struct kgsl_pagetable *pt,
 			unsigned int pt_base);
 void kgsl_mmu_set_mmutype(char *mmutype);
 unsigned int kgsl_mmu_get_current_ptbase(struct kgsl_device *device);
 enum kgsl_mmutype kgsl_mmu_get_mmutype(void);
+unsigned int kgsl_mmu_get_ptsize(void);
 #endif /* __KGSL_MMU_H */
-
