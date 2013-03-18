@@ -384,13 +384,13 @@ static int msm_batt_power_get_property(struct power_supply *psy,
         val->intval = msm_batt_info.batt_technology;
         break;
     case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
-        val->intval = msm_batt_info.voltage_max_design;
+        val->intval = msm_batt_info.voltage_max_design*1000;
         break;
     case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
-        val->intval = msm_batt_info.voltage_min_design;
+        val->intval = msm_batt_info.voltage_min_design*1000;
         break;
     case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-        val->intval = msm_batt_info.battery_voltage;
+        val->intval = msm_batt_info.battery_voltage*1000;
         break;
     case POWER_SUPPLY_PROP_CAPACITY:
         val->intval = msm_batt_info.batt_capacity;
@@ -1567,13 +1567,13 @@ static int msm_batt_power_get_property(struct power_supply *psy,
         val->intval = msm_batt_info.batt_technology;
         break;
     case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
-        val->intval = msm_batt_info.voltage_max_design;
+        val->intval = msm_batt_info.voltage_max_design*1000;
         break;
     case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
-        val->intval = msm_batt_info.voltage_min_design;
+        val->intval = msm_batt_info.voltage_min_design*1000;
         break;
     case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-        val->intval = msm_batt_info.battery_voltage;
+        val->intval = msm_batt_info.battery_voltage*1000;
         break;
     case POWER_SUPPLY_PROP_CAPACITY:
 #ifdef	ZTE_PLATFORM_NOT_SHUTDOWN_WHILE_PERCENTAGE_0
@@ -1772,7 +1772,7 @@ static int msm_batt_get_batt_chg_status_v1(void)
 		rep_batt_chg.battery_voltage=gaugereadvalue&0xffff;
 #endif
         }
-	 else	//chenchongbao.20110713_1  如果读电量计出错，则采用上次电量计数据
+	 else	//chenchongbao.20110713_1  \C8\E7\B9\FB\B6\C1\B5\E7\C1\BF\BC瞥\F6\B4\ED\A3\AC\D4\F2\B2\C9\D3\C3\C9洗蔚\E7\C1\BF\BC\C6\CA\FD\BE\DD
 	{
 		gauge_voltage = gauge_old_voltage;
 		rep_batt_chg.battery_voltage=gauge_voltage;
@@ -1792,7 +1792,7 @@ static int msm_batt_get_batt_chg_status_v1(void)
 				rep_batt_chg.battery_capacity=0;
 			}
 			//else use arm9 capacity data!
-			else	//chenchongbao.20110713_1	如果没有如此处理，将导致电量由0跳变到ARM9 的容量值比如3% !!!
+			else	//chenchongbao.20110713_1	\C8\E7\B9\FB没\D3\D0\C8\E7\B4舜\A6\C0\ED\A3\AC\BD\AB\B5\BC\D6碌\E7\C1\BF\D3\C90\CC\F8\B1涞紸RM9 \B5\C4\C8\DD\C1\BF值\B1\C8\C8\E73% !!!
 			{
 				if(rep_batt_chg.battery_capacity!=0){
 					rep_batt_chg.battery_capacity=1;	
@@ -1807,7 +1807,7 @@ static int msm_batt_get_batt_chg_status_v1(void)
 		rep_batt_chg.battery_capacity=gaugereadvalue&0xff;
 #endif
         }
-	else	//chenchongbao.20110713_1  如果读电量计出错，则采用上次电量计数据
+	else	//chenchongbao.20110713_1  \C8\E7\B9\FB\B6\C1\B5\E7\C1\BF\BC瞥\F6\B4\ED\A3\AC\D4\F2\B2\C9\D3\C3\C9洗蔚\E7\C1\BF\BC\C6\CA\FD\BE\DD
 	{
 		gauge_capacity = gauge_old_capacity;
 		rep_batt_chg.battery_capacity=gauge_capacity;
@@ -1819,7 +1819,7 @@ static int msm_batt_get_batt_chg_status_v1(void)
 #ifdef ZTE_GAUGE_OPTIMIZE_FEATURE
             gauge_status++;
             //gaugereadvalue |= 0xFFFF0000;	//chenchongbao.2011.6.7
-            if(gaugereadvalue & 0x8000)		//chenchongbao.20110713_1 解决负值问题
+            if(gaugereadvalue & 0x8000)		//chenchongbao.20110713_1 \BD\E2\BE\F6\B8\BA值\CE\CA\CC\E2
 				gaugereadvalue |= 0xFFFF0000;
             gauge_current=(int)gaugereadvalue;
 #endif
@@ -1876,10 +1876,10 @@ static int msm_batt_get_batt_chg_status_v1(void)
 #endif  //ZTE_GAUGE_OPTIMIZE_FEATURE
 
 
-//chenchongbao.2011.5.25 : 用于处理连接USB 时手机大电流造成的掉电关机反复重启问题!
+//chenchongbao.2011.5.25 : \D3\C3\D3诖\A6\C0\ED\C1\AC\BD\D3USB 时\CA只\FA\B4\F3\B5\E7\C1\F7\D4\EC\B3傻牡\F4\B5\E7\B9鼗\FA\B7\B4\B8\B4\D6\D8\C6\F4\CE\CA\CC\E2!
 
 if(  ( (rep_batt_chg.charger_type == CHARGER_TYPE_USB_PC) ||(rep_batt_chg.charger_type == CHARGER_TYPE_USB_WALL) )
-		//(rep_batt_chg.charger_type != CHARGER_TYPE_NONE)  V9  默认为NONE! 为了避免出现invalid 类型, 因此采用上述两个条件!
+		//(rep_batt_chg.charger_type != CHARGER_TYPE_NONE)  V9  默\C8\CF为NONE! 为\C1吮\DC\C3\E2\B3\F6\CF\D6invalid \C0\E0\D0\CD, \D2\F2\B4瞬\C9\D3\C3\C9\CF\CA\F6\C1\BD\B8\F6\CC\F5\BC\FE!
 	&& (rep_batt_chg.battery_capacity == 0) && (rep_batt_chg.battery_voltage < 3400) )
 {
 	low_power_cnt ++;
