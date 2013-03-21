@@ -9,11 +9,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA.
- *
  */
 
 #include <linux/module.h>
@@ -117,7 +112,7 @@ void mdp4_overlay_update_lcd(struct msm_fb_data_type *mfd)
 		ptype = mdp4_overlay_format2type(mfd->fb_imgType);
 		if (ptype < 0)
 			printk(KERN_INFO "%s: format2type failed\n", __func__);
-		pipe = mdp4_overlay_pipe_alloc(ptype, MDP4_MIXER0, 0);
+		pipe = mdp4_overlay_pipe_alloc(ptype, MDP4_MIXER0);
 		if (pipe == NULL)
 			printk(KERN_INFO "%s: pipe_alloc failed\n", __func__);
 		pipe->pipe_used++;
@@ -362,6 +357,8 @@ void mdp4_overlay0_done_mddi(struct mdp_dma_data *dma)
 	if (busy_wait_cnt)
 		busy_wait_cnt--;
 
+	pr_debug("%s: ISR-done\n", __func__);
+
 	if (mddi_pipe->blt_addr) {
 		if (mddi_pipe->blt_cnt == 0) {
 			mdp4_overlayproc_cfg(mddi_pipe);
@@ -388,6 +385,8 @@ void mdp4_mddi_overlay_restore(void)
 	if (mddi_mfd == NULL)
 		return;
 
+	pr_debug("%s: resotre, pid=%d\n", __func__, current->pid);
+
 	if (mddi_mfd->panel_power_on == 0)
 		return;
 	if (mddi_mfd && mddi_pipe) {
@@ -411,6 +410,7 @@ void mdp4_mddi_dma_busy_wait(struct msm_fb_data_type *mfd)
 	unsigned long flag;
 	int need_wait = 0;
 
+	pr_debug("%s: START, pid=%d\n", __func__, current->pid);
 	spin_lock_irqsave(&mdp_spin_lock, flag);
 	if (mfd->dma->busy == TRUE) {
 		if (busy_wait_cnt == 0)
@@ -423,19 +423,23 @@ void mdp4_mddi_dma_busy_wait(struct msm_fb_data_type *mfd)
 
 	if (need_wait) {
 		/* wait until DMA finishes the current job */
+		pr_debug("%s: PENDING, pid=%d\n", __func__, current->pid);
 		wait_for_completion(&mfd->dma->comp);
 	}
+	pr_debug("%s: DONE, pid=%d\n", __func__, current->pid);
 }
 
 void mdp4_mddi_kickoff_video(struct msm_fb_data_type *mfd,
 				struct mdp4_overlay_pipe *pipe)
 {
+	pr_debug("%s: pid=%d\n", __func__, current->pid);
 	mdp4_mddi_overlay_kickoff(mfd, pipe);
 }
 
 void mdp4_mddi_kickoff_ui(struct msm_fb_data_type *mfd,
 				struct mdp4_overlay_pipe *pipe)
 {
+	pr_debug("%s: pid=%d\n", __func__, current->pid);
 	mdp4_mddi_overlay_kickoff(mfd, pipe);
 }
 
@@ -443,10 +447,35 @@ void mdp4_mddi_kickoff_ui(struct msm_fb_data_type *mfd,
 void mdp4_mddi_overlay_kickoff(struct msm_fb_data_type *mfd,
 				struct mdp4_overlay_pipe *pipe)
 {
+	/* change mdp clk while mdp is idle` */
+	mdp4_set_perf_level();
+
+	if (mdp_hw_revision == MDP4_REVISION_V2_1) {
+		if (mdp4_overlay_status_read(MDP4_OVERLAY_TYPE_UNSET)) {
+			uint32  data;
+			data = inpdw(MDP_BASE + 0x0028);
+			data &= ~0x0300;        /* bit 8, 9, MASTER4 */
+			if (mfd->fbi->var.xres == 540) /* qHD, 540x960 */
+				data |= 0x0200;
+			else
+				data |= 0x0100;
+			MDP_OUTP(MDP_BASE + 0x00028, data);
+			mdp4_overlay_status_write(MDP4_OVERLAY_TYPE_UNSET,
+				false);
+		}
+		if (mdp4_overlay_status_read(MDP4_OVERLAY_TYPE_SET)) {
+			uint32  data;
+			data = inpdw(MDP_BASE + 0x0028);
+			data &= ~0x0300;        /* bit 8, 9, MASTER4 */
+			MDP_OUTP(MDP_BASE + 0x00028, data);
+			mdp4_overlay_status_write(MDP4_OVERLAY_TYPE_SET, false);
+		}
+	}
 	mdp_enable_irq(MDP_OVERLAY0_TERM);
 	mfd->dma->busy = TRUE;
 	/* start OVERLAY pipe */
 	mdp_pipe_kickoff(MDP_OVERLAY0_TERM, mfd);
+	mdp4_stat.kickoff_ov0++;
 }
 
 void mdp4_dma_s_update_lcd(struct msm_fb_data_type *mfd,
@@ -521,11 +550,15 @@ void mdp4_dma_s_update_lcd(struct msm_fb_data_type *mfd,
 void mdp4_mddi_dma_s_kickoff(struct msm_fb_data_type *mfd,
 				struct mdp4_overlay_pipe *pipe)
 {
+	/* change mdp clk while mdp is idle` */
+	mdp4_set_perf_level();
+
 	mdp_enable_irq(MDP_DMA_S_TERM);
 	mfd->dma->busy = TRUE;
 	mfd->ibuf_flushed = TRUE;
 	/* start dma_s pipe */
 	mdp_pipe_kickoff(MDP_DMA_S_TERM, mfd);
+	mdp4_stat.kickoff_dmas++;
 
 	/* wait until DMA finishes the current job */
 	wait_for_completion(&mfd->dma->comp);
@@ -562,15 +595,12 @@ void mdp4_mddi_overlay(struct msm_fb_data_type *mfd)
 		} else	/* no dams dmap switch  */
 			mdp4_mddi_kickoff_ui(mfd, mddi_pipe);
 
-		mdp4_stat.kickoff_mddi++;
-
 	/* signal if pan function is waiting for the update completion */
 		if (mfd->pan_waiting) {
 			mfd->pan_waiting = FALSE;
 			complete(&mfd->pan_comp);
 		}
 	}
-	mdp4_overlay_resource_release();
 	mutex_unlock(&mfd->dma->ov_mutex);
 }
 

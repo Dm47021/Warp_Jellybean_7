@@ -10,7 +10,7 @@ CFLAGS_REMOVE_ftrace.o = -pg
 endif
 
 CFLAGS_REMOVE_return_address.o = -pg
-CFLAGS_REMOVE_return_address.o = -Werror
+#CFLAGS_REMOVE_return_address.o = -Werror
 
 # Object file lists.
 
