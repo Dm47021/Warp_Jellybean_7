@@ -474,15 +474,13 @@ static unsigned short synaptics_get_config_size(void)
 
 #if 0
 //Go to a endless circule if config or firmware sizes dismatch here.
-static void synaptics_read_firmware_header(struct i2c_client *client
-	byte *pfwfile, unsigned long filesize)
+void synaptics_read_firmware_header(struct i2c_client *client)
 {
 	unsigned long check_sum;
 	//unsigned char data;
 	int ret;
-	//unsigned long filesize;
 	
-	//filesize = sizeof(SynaFirmware) -1;
+	filesize = sizeof(SynaFirmware) -1;
 
 	pr_info("\n%s:Scanning SynaFirmware[], header file - len = %ld \n\n", __func__, filesize);
 

@@ -7189,7 +7189,7 @@ static struct file_operations debug_global_file_ops = {
 };
 
 extern void __init msm_init_pmic_vibrator(void); 
-#ifdef CONFIG_TOUCHSCREEN_VIRTUAL_KEYS
+/*#ifdef CONFIG_TOUCHSCREEN_VIRTUAL_KEYS
 struct kobject *android_touch_kobj;
 static void touch_sysfs_init(void)
 {
@@ -7198,7 +7198,7 @@ static void touch_sysfs_init(void)
 		printk(KERN_ERR "%s: subsystem_register failed\n", __func__);
 	}
 }
-#endif
+#endif */
 
 #ifdef CONFIG_ZTE_PLATFORM
 
@@ -7317,7 +7317,7 @@ static void __init msm7x30_init(void)
 	i2c_register_board_info(0, msm_i2c_board_info,
 			ARRAY_SIZE(msm_i2c_board_info));
 #ifdef CONFIG_TOUCHSCREEN_VIRTUAL_KEYS
-	touch_sysfs_init();
+	//touch_sysfs_init();
 #endif
 
 	if (!machine_is_msm8x55_svlte_ffa())

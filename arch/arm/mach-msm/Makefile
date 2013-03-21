@@ -191,6 +191,6 @@ obj-$(CONFIG_BT_MSM_PINTEST)  += btpintest.o
 obj-$(CONFIG_MACH_V9PLUS) += board-zte-v9plus.o devices-zte-v9plus.o msm_vibrator.o 
 obj-$(CONFIG_MACH_BLADEPLUS) += board-zte-bladeplus.o devices-zte-bladeplus.o msm_vibrator.o
 obj-$(CONFIG_MACH_JOE) += board-zte-joe.o devices-zte-joe.o msm_vibrator.o
-obj-$(CONFIG_MACH_ARTHUR) += board-zte-arthur.o devices-zte-arthur.o msm_vibrator.o
+obj-$(CONFIG_MACH_ARTHUR) += board-zte-arthur.o board-zte-ts.o devices-zte-arthur.o msm_vibrator.o
 obj-$(CONFIG_MACH_SKATEPLUS) += board-zte-skateplus.o devices-zte-skateplus.o msm_vibrator.o
 obj-$(CONFIG_MACH_SEAN) += board-zte-sean.o devices-zte-sean.o msm_vibrator.o
