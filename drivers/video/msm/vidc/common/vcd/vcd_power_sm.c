@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,14 +9,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA.
- *
  */
 
-#include "vidc_type.h"
+#include <media/msm/vidc_type.h>
 #include "vcd_power_sm.h"
 #include "vcd_core.h"
 #include "vcd.h"
@@ -310,7 +305,7 @@ u32 vcd_update_clnt_perf_lvl(
 	struct vcd_dev_ctxt *dev_ctxt = cctxt->dev_ctxt;
 	u32 new_perf_lvl;
 	new_perf_lvl = frm_p_units *\
-          (fps->fps_numerator / fps->fps_denominator);
+		(fps->fps_numerator / fps->fps_denominator);
 	if (cctxt->status.req_perf_lvl) {
 		dev_ctxt->reqd_perf_lvl =
 		    dev_ctxt->reqd_perf_lvl - cctxt->reqd_perf_lvl +
@@ -322,11 +317,9 @@ u32 vcd_update_clnt_perf_lvl(
 	return rc;
 }
 
-
 u32 vcd_gate_clock(struct vcd_dev_ctxt *dev_ctxt)
 {
 	u32 rc = VCD_S_SUCCESS;
-#ifndef VIDC_1080p_DISABLE_GATING
 	if (dev_ctxt->pwr_clk_state == VCD_PWRCLK_STATE_OFF ||
 		dev_ctxt->pwr_clk_state == VCD_PWRCLK_STATE_ON_NOTCLOCKED) {
 		VCD_MSG_ERROR("%s(): Clk is Off or Not Clked yet\n", __func__);
@@ -337,14 +330,12 @@ u32 vcd_gate_clock(struct vcd_dev_ctxt *dev_ctxt)
 		dev_ctxt->pwr_clk_state = VCD_PWRCLK_STATE_ON_CLOCKGATED;
 	else
 		rc = VCD_ERR_FAIL;
-#endif
 	return rc;
 }
 
 u32 vcd_un_gate_clock(struct vcd_dev_ctxt *dev_ctxt)
 {
 	u32 rc = VCD_S_SUCCESS;
-#ifndef VIDC_1080p_DISABLE_GATING
 	if (dev_ctxt->pwr_clk_state == VCD_PWRCLK_STATE_OFF ||
 		dev_ctxt->pwr_clk_state == VCD_PWRCLK_STATE_ON_NOTCLOCKED) {
 		VCD_MSG_ERROR("%s(): Clk is Off or Not Clked yet\n", __func__);
@@ -355,6 +346,6 @@ u32 vcd_un_gate_clock(struct vcd_dev_ctxt *dev_ctxt)
 		dev_ctxt->pwr_clk_state = VCD_PWRCLK_STATE_ON_CLOCKED;
 	else
 		rc = VCD_ERR_FAIL;
-#endif
 	return rc;
 }
+

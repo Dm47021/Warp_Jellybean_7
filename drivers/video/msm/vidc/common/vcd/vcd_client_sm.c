@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,14 +9,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
- * 02110-1301, USA.
- *
  */
 
-#include "vidc_type.h"
+#include <media/msm/vidc_type.h>
 #include "vcd.h"
 
 static const struct vcd_clnt_state_table *vcd_clnt_state_table[];
@@ -95,13 +90,13 @@ static u32 vcd_encode_start_in_open(struct vcd_clnt_ctxt *cctxt)
 		return VCD_ERR_ILLEGAL_OP;
 	}
 
-	if (!cctxt->in_buf_pool.entries ||
+	if ((!cctxt->meta_mode && !cctxt->in_buf_pool.entries) ||
 	    !cctxt->out_buf_pool.entries ||
-	    cctxt->in_buf_pool.validated != cctxt->in_buf_pool.count ||
+	    (!cctxt->meta_mode &&
+		 cctxt->in_buf_pool.validated != cctxt->in_buf_pool.count) ||
 	    cctxt->out_buf_pool.validated !=
 	    cctxt->out_buf_pool.count) {
 		VCD_MSG_ERROR("Buffer pool is not completely setup yet");
-
 		return VCD_ERR_BAD_STATE;
 	}
 
@@ -374,7 +369,8 @@ static u32 vcd_flush_in_invalid(struct vcd_clnt_ctxt *cctxt,
 			cctxt->status.mask |= (mode & VCD_FLUSH_ALL);
 			vcd_send_flush_done(cctxt, VCD_S_SUCCESS);
 		}
-	}
+	} else
+		cctxt->status.mask |= (mode & VCD_FLUSH_ALL);
 	return rc;
 }
 
@@ -497,8 +493,20 @@ static u32 vcd_set_property_cmn
 	}
 
 	rc = ddl_set_property(cctxt->ddl_handle, prop_hdr, prop_val);
-	VCD_FAILED_RETURN(rc, "Failed: ddl_set_property");
+	if (rc) {
+		/* Some properties aren't known to ddl that we can handle */
+		if (prop_hdr->prop_id != VCD_I_VOP_TIMING_CONSTANT_DELTA)
+			VCD_FAILED_RETURN(rc, "Failed: ddl_set_property");
+	}
+
 	switch (prop_hdr->prop_id) {
+	case VCD_I_META_BUFFER_MODE:
+		{
+			struct vcd_property_live *live =
+			    (struct vcd_property_live *)prop_val;
+			cctxt->meta_mode = live->live;
+			break;
+		}
 	case VCD_I_LIVE:
 		{
 			struct vcd_property_live *live =
@@ -531,6 +539,24 @@ static u32 vcd_set_property_cmn
 		  cctxt->bframe = iperiod->b_frames;
 		  break;
 	   }
+	case VCD_I_VOP_TIMING_CONSTANT_DELTA:
+	   {
+		   struct vcd_property_vop_timing_constant_delta *delta =
+			   (struct vcd_property_vop_timing_constant_delta *)
+			   prop_val;
+		   if (delta->constant_delta > 0) {
+			cctxt->time_frame_delta = delta->constant_delta;
+			rc = VCD_S_SUCCESS;
+		   } else {
+			VCD_MSG_ERROR("Frame delta must be positive");
+			rc = VCD_ERR_ILLEGAL_PARM;
+		   }
+		   break;
+	   }
+	case VCD_REQ_PERF_LEVEL:
+		rc = vcd_req_perf_level(cctxt,
+			(struct vcd_property_perf_level *)prop_val);
+		break;
 	default:
 		{
 			break;
@@ -543,6 +569,7 @@ static u32 vcd_get_property_cmn
     (struct vcd_clnt_ctxt *cctxt,
      struct vcd_property_hdr *prop_hdr, void *prop_val)
 {
+	int rc;
 	VCD_MSG_LOW("vcd_get_property_cmn in %d:", cctxt->clnt_state.state);
 	VCD_MSG_LOW("property Id = %d", prop_hdr->prop_id);
 	if (!prop_hdr->sz || !prop_hdr->prop_id) {
@@ -550,7 +577,24 @@ static u32 vcd_get_property_cmn
 
 		return VCD_ERR_ILLEGAL_PARM;
 	}
-	return ddl_get_property(cctxt->ddl_handle, prop_hdr, prop_val);
+	rc = ddl_get_property(cctxt->ddl_handle, prop_hdr, prop_val);
+	if (rc) {
+		/* Some properties aren't known to ddl that we can handle */
+		if (prop_hdr->prop_id != VCD_I_VOP_TIMING_CONSTANT_DELTA)
+			VCD_FAILED_RETURN(rc, "Failed: ddl_set_property");
+	}
+
+	switch (prop_hdr->prop_id) {
+	case VCD_I_VOP_TIMING_CONSTANT_DELTA:
+	{
+		struct vcd_property_vop_timing_constant_delta *delta =
+			(struct vcd_property_vop_timing_constant_delta *)
+			prop_val;
+		delta->constant_delta = cctxt->time_frame_delta;
+		rc = VCD_S_SUCCESS;
+	}
+	}
+	return rc;
 }
 
 static u32 vcd_set_buffer_requirements_cmn
@@ -900,6 +944,11 @@ static void vcd_clnt_cb_in_run
 				VCD_EVT_IND_HWERRFATAL, status);
 			 break;
 		}
+	case VCD_EVT_IND_INFO_OUTPUT_RECONFIG:
+		{
+			vcd_handle_ind_info_output_reconfig(cctxt, status);
+			break;
+		}
 	default:
 		{
 			VCD_MSG_ERROR
@@ -993,6 +1042,11 @@ static void vcd_clnt_cb_in_eos
 		{
 			vcd_handle_ind_hw_err_fatal(cctxt,
 				VCD_EVT_IND_HWERRFATAL,	status);
+			break;
+		}
+	case VCD_EVT_IND_INFO_OUTPUT_RECONFIG:
+		{
+			vcd_handle_ind_info_output_reconfig(cctxt, status);
 			break;
 		}
 	default:
@@ -1395,6 +1449,15 @@ static void  vcd_clnt_cb_in_invalid(
 		}
 	case VCD_EVT_RESP_EOS_DONE:
 		{
+			vcd_mark_frame_channel(cctxt->dev_ctxt);
+			break;
+		}
+	case VCD_EVT_IND_OUTPUT_RECONFIG:
+		{
+			if (cctxt->status.frame_submitted > 0)
+				cctxt->status.frame_submitted--;
+			else
+				cctxt->status.frame_delayed--;
 			vcd_mark_frame_channel(cctxt->dev_ctxt);
 			break;
 		}
