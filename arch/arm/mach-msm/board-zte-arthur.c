@@ -921,6 +921,13 @@ static struct i2c_board_info cy8info[] __initdata = {
 	},
 };
 #endif
+#ifdef CONFIG_SENSORS_AKM8962C 
+struct akm8962_platform_data akm_platform_data_8962 ={
+	.layout			 = 5,
+	.gpio_DRDY		 = 18,
+};
+#endif
+
 static struct lis302dl_platform_data gsensor = {
 #ifdef CONFIG_ZTE_DTV  /* DTV used GPIO83,so change MMA_INT from GPIO37 to GPIO83 */
 	.gpio_intr1 =  83,
@@ -932,6 +939,17 @@ static struct lis302dl_platform_data gsensor = {
 	.int_active_low = 1,
 };
 static struct i2c_board_info msm_camera_boardinfo[] __initdata = {
+// Sensor Update to AKM8962C
+#include <linux/akm8962_new.h>
+
+#ifdef CONFIG_SENSORS_AKM8962C 
+	{
+		.type = "akm8962",
+		.addr = 0x0c,
+		//.flag = I2C_CLIENT_WAKE,
+		.platform_data = &akm_platform_data_8962,
+		.irq = MSM_GPIO_TO_INT(85),
+#endif
 #ifdef CONFIG_SENSORS_AKM8962
 	{
 		I2C_BOARD_INFO("akm8962", 0x0c),
