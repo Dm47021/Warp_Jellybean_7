@@ -21,6 +21,7 @@ endif
 obj-$(CONFIG_SYS_HYPERVISOR) += hypervisor.o
 
 obj-$(CONFIG_SYNC)  += sync.o
+obj-$(CONFIG_SW_SYNC)  += sw_sync.o
 
 ifeq ($(CONFIG_DEBUG_DRIVER),y)
 EXTRA_CFLAGS += -DDEBUG
