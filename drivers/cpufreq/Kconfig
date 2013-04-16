@@ -54,12 +54,20 @@ config CPU_FREQ_STAT_DETAILS
 	  If in doubt, say N.
 
 choice
+
 	prompt "Default CPUFreq governor"
 	default CPU_FREQ_DEFAULT_GOV_USERSPACE if CPU_FREQ_SA1100 || CPU_FREQ_SA1110
 	default CPU_FREQ_DEFAULT_GOV_PERFORMANCE
 	help
 	  This option sets which CPUFreq governor shall be loaded at
 	  startup. If in doubt, select 'performance'.
+
+config CPU_FREQ_DEFAULT_GOV_DARKSIDE
+	bool "darkside"
+	select CPU_FREQ_GOV_DARKSIDE
+	help
+	  Use the CPUFreq governor 'DARKSIDE' as default.
+	  If in doubt, say N.
 
 config CPU_FREQ_DEFAULT_GOV_PERFORMANCE
 	bool "performance"
@@ -147,6 +155,12 @@ config CPU_FREQ_DEFAULT_GOV_INTELLIDEMAND
 	  Intelligent OnDemand Govneror based on Samsung Patched OnDemand
 
 endchoice
+
+config CPU_FREQ_GOV_DARKSIDE
+	tristate "'darkside' cpufreq governor"
+	depends on CPU_FREQ
+	help
+	  'darkside' - a "slightly more agressive smart" optimized governor!
 
 config CPU_FREQ_GOV_PERFORMANCE
 	tristate "'performance' governor"
