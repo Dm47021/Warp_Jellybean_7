@@ -77,6 +77,12 @@ config CPU_FREQ_DEFAULT_GOV_PERFORMANCE
 	  the frequency statically to the highest frequency supported by
 	  the CPU.
 
+config CPU_FREQ_GOV_SUPERBAD
+	tristate "'superbad' cpufreq governor"
+	depends on CPU_FREQ
+	help
+	  'superbad' - a "superbad" super smooth rendition of a highly optimized "smartass" governor!
+
 config CPU_FREQ_DEFAULT_GOV_POWERSAVE
 	bool "powersave"
 	depends on EMBEDDED
