@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2009-2011, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,15 +9,29 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301, USA.
+ *
  */
-
+#include<linux/module.h>
+#include<linux/kernel.h>
+#include<linux/init.h>
+#include<linux/types.h>
+#include<linux/fs.h>
+#include<linux/string.h>
+#include<asm/uaccess.h> /* get_fs(),set_fs(),get_ds() */
+#define FILE_DIR "sys/devices/platform/msm_sdcc.3/polling"
+char *buff = "1";
+char tmp[100];
+static struct file *filp = NULL;
 #include <linux/libra_sdioif.h>
 #include <linux/delay.h>
 #include <linux/mmc/sdio.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/host.h>
 #include <linux/mmc/card.h>
-#include <linux/module.h>
 
 /* Libra SDIO function device */
 static struct sdio_func *libra_sdio_func;
@@ -27,47 +41,8 @@ static int libra_mmc_host_index;
 /* SDIO Card ID / Device ID */
 static unsigned short  libra_sdio_card_id;
 
-/* completion variables */
-struct completion gCard_rem_event_var;
-EXPORT_SYMBOL(gCard_rem_event_var);
-struct completion gShutdown_event_var;
-EXPORT_SYMBOL(gShutdown_event_var);
-
 static suspend_handler_t *libra_suspend_hldr;
 static resume_handler_t *libra_resume_hldr;
-static notify_card_removal_t *libra_notify_card_removal_hdlr;
-static shutdown_handler_t *libra_sdio_shutdown_hdlr;
-
-int libra_enable_sdio_irq_in_chip(struct sdio_func *func, u8 enable)
-{
-	unsigned char reg = 0;
-	int err = 0;
-
-	sdio_claim_host(func);
-
-	/* Read the value into reg */
-	libra_sdiocmd52(func, SDIO_CCCR_IENx, &reg, 0, &err);
-	if (err)
-		printk(KERN_ERR "%s: Could not read  SDIO_CCCR_IENx register "
-				"err=%d\n", __func__, err);
-
-	if (libra_mmc_host) {
-		if (enable) {
-			reg |= 1 << func->num;
-			reg |= 1;
-		} else {
-			reg &= ~(1 << func->num);
-		}
-		libra_sdiocmd52(func, SDIO_CCCR_IENx, &reg, 1, &err);
-		if (err)
-			printk(KERN_ERR "%s: Could not enable/disable irq "
-					 "err=%d\n", __func__, err);
-	 }
-	sdio_release_host(func);
-
-	return err;
-}
-EXPORT_SYMBOL(libra_enable_sdio_irq_in_chip);
 
 /**
  * libra_sdio_configure() - Function to configure the SDIO device param
@@ -128,8 +103,6 @@ int libra_sdio_configure(sdio_irq_handler_t libra_sdio_rxhandler,
 		sdio_release_host(func);
 		goto cfg_error;
 	}
-
-	libra_enable_sdio_irq_in_chip(func, 0);
 
 	sdio_release_host(func);
 
@@ -406,8 +379,6 @@ static int libra_sdio_probe(struct sdio_func *func,
 
 static void libra_sdio_remove(struct sdio_func *func)
 {
-	if (libra_notify_card_removal_hdlr)
-		libra_notify_card_removal_hdlr();
 	libra_sdio_func = NULL;
 
 	printk(KERN_INFO "%s : Module removed.\n", __func__);
@@ -460,31 +431,6 @@ static int libra_sdio_resume(struct device *dev)
 #define libra_sdio_resume 0
 #endif
 
-static void libra_sdio_shutdown(struct device *dev)
-{
-	if (libra_sdio_shutdown_hdlr) {
-		libra_sdio_shutdown_hdlr();
-		printk(KERN_INFO "%s : Notified shutdown event to Libra driver.\n",
-			 __func__);
-	}
-}
-
-int libra_sdio_register_shutdown_hdlr(
-		shutdown_handler_t *libra_shutdown_hdlr)
-{
-	libra_sdio_shutdown_hdlr = libra_shutdown_hdlr;
-	return 0;
-}
-EXPORT_SYMBOL(libra_sdio_register_shutdown_hdlr);
-
-int libra_sdio_notify_card_removal(
-		notify_card_removal_t *libra_sdio_notify_card_removal_hdlr)
-{
-	libra_notify_card_removal_hdlr = libra_sdio_notify_card_removal_hdlr;
-	return 0;
-}
-EXPORT_SYMBOL(libra_sdio_notify_card_removal);
-
 static struct sdio_device_id libra_sdioid[] = {
     {.class = 0, .vendor = LIBRA_MAN_ID,  .device = LIBRA_REV_1_0_CARD_ID},
     {.class = 0, .vendor = VOLANS_MAN_ID, .device = VOLANS_REV_2_0_CARD_ID},
@@ -497,29 +443,55 @@ static const struct dev_pm_ops libra_sdio_pm_ops = {
 };
 
 static struct sdio_driver libra_sdiofn_driver = {
-	.name      = "libra_sdiofn",
-	.id_table  = libra_sdioid,
-	.probe     = libra_sdio_probe,
-	.remove    = libra_sdio_remove,
-	.drv.pm    = &libra_sdio_pm_ops,
-	.drv.shutdown    = libra_sdio_shutdown,
+    .name      = "libra_sdiofn",
+    .id_table  = libra_sdioid,
+    .probe     = libra_sdio_probe,
+    .remove    = libra_sdio_remove,
+    .drv.pm    = &libra_sdio_pm_ops,
 };
 
 static int __init libra_sdioif_init(void)
 {
+    mm_segment_t old_fs;
+    ssize_t ret;
+    
+    filp = filp_open(FILE_DIR, O_RDWR | O_CREAT, 0644);
+    
+    //    if(!filp)
+    if(IS_ERR(filp))
+        printk("open error.../n");
+    
+    old_fs = get_fs();
+    set_fs(get_ds());
+    
+    filp->f_op->write(filp, buff, strlen(buff), &filp->f_pos);
+    
+    filp->f_op->llseek(filp,0,0);
+    ret = filp->f_op->read(filp, tmp, strlen(buff), &filp->f_pos);
+    
+    set_fs(old_fs);
+    
+    if(ret > 0)
+        printk("%s/n",tmp);
+    else if(ret == 0)
+        printk("read nothing............./n");
+    else 
+        {
+            printk("read error/n");
+            return -1;
+        }
+
 	libra_sdio_func = NULL;
 	libra_mmc_host = NULL;
 	libra_mmc_host_index = -1;
 	libra_suspend_hldr = NULL;
 	libra_resume_hldr = NULL;
-	libra_notify_card_removal_hdlr = NULL;
-	libra_sdio_shutdown_hdlr = NULL;
 
 	sdio_register_driver(&libra_sdiofn_driver);
 
 	printk(KERN_INFO "%s: Loaded Successfully\n", __func__);
 
-	return 0;
+    return 0;
 }
 
 static void __exit libra_sdioif_exit(void)
