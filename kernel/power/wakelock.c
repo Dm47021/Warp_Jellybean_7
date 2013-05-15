@@ -52,6 +52,13 @@ struct wake_lock main_wake_lock;
 struct wake_lock prevent_idle_lock;//liuyijian 20110415 add
 suspend_state_t requested_suspend_state = PM_SUSPEND_MEM;
 static struct wake_lock unknown_wakeup;
+static struct wake_lock suspend_backoff_lock;
+
+#define SUSPEND_BACKOFF_FAILURES  10
+#define SUSPEND_BACKOFF_INTERVAL  5000
+
+static unsigned suspend_backoff_count;
+static unsigned suspend_fail_count;
 
 //ruanmeisi move do_sync from earlysuspend to thread
 struct suspend_sync_work
@@ -477,11 +484,22 @@ static int unknown_wakeup_timeout = 500;
 #ifdef CONFIG_ZTE_PLATFORM
 extern int cpufreq_set_min_freq(int flag);
 #endif
+
+static void suspend_backoff(void)
+{
+  pr_info("suspend: too many immediate wakeups, back off\n");
+  ++suspend_backoff_count;
+  wake_lock_timeout(&suspend_backoff_lock,
+       msecs_to_jiffies(suspend_backoff_count *
+             SUSPEND_BACKOFF_INTERVAL));
+}
+
 module_param_named(unknown_wakeup_timeout, unknown_wakeup_timeout, int, S_IRUGO | S_IWUSR | S_IWGRP)
 static void suspend(struct work_struct *work)
 {
 	int ret;
 	int entry_event_num;
+        struct timespec ts_entry, ts_exit;
 
      //ruanmeisi
 	//	sys_sync();
@@ -508,17 +526,30 @@ static void suspend(struct work_struct *work)
 	
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("suspend: enter suspend\n");
+        getnstimeofday(&ts_entry);
 	ret = pm_suspend(requested_suspend_state);
+        getnstimeofday(&ts_exit);
 	if (debug_mask & DEBUG_EXIT_SUSPEND) {
-		struct timespec ts;
 		struct rtc_time tm;
-		getnstimeofday(&ts);
-		rtc_time_to_tm(ts.tv_sec, &tm);
+                rtc_time_to_tm(ts_exit.tv_sec, &tm);
 		pr_info("suspend: exit suspend, ret = %d "
 			"(%d-%02d-%02d %02d:%02d:%02d.%09lu UTC)\n", ret,
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-			tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
+			tm.tm_hour, tm.tm_min, tm.tm_sec, ts_exit.tv_nsec);
 	}
+
+  if (ts_exit.tv_sec - ts_entry.tv_sec <= 1) {
+    ++suspend_fail_count;
+
+    if (suspend_fail_count == SUSPEND_BACKOFF_FAILURES) {
+      suspend_backoff();
+      suspend_fail_count = 0;
+    }
+  } else {
+    suspend_fail_count = 0;
+    suspend_backoff_count = 0;
+  }
+
 	if (current_event_num == entry_event_num) {
 		if (debug_mask & DEBUG_SUSPEND)
 			pr_info("suspend: pm_suspend returned with no event\n");
@@ -823,6 +854,8 @@ static int __init wakelocks_init(void)
     wake_lock_init(&prevent_idle_lock, WAKE_LOCK_IDLE, "prevent_idle");//liuyijian 20110415 add
 	wake_lock(&main_wake_lock);
 	wake_lock_init(&unknown_wakeup, WAKE_LOCK_SUSPEND, "unknown_wakeups");
+        wake_lock_init(&suspend_backoff_lock, WAKE_LOCK_SUSPEND,
+                 "suspend_backoff");    
 
 	ret = platform_device_register(&power_device);
 	if (ret) {
@@ -870,6 +903,7 @@ err_suspend_work_queue:
 err_platform_driver_register:
 	platform_device_unregister(&power_device);
 err_platform_device_register:
+        wake_lock_destroy(&suspend_backoff_lock);
 	wake_lock_destroy(&unknown_wakeup);
 	wake_lock_destroy(&main_wake_lock);
     wake_lock_destroy(&prevent_idle_lock);//liuyijian 20110415 add
@@ -892,6 +926,7 @@ static void  __exit wakelocks_exit(void)
 	destroy_workqueue(suspend_work_queue);
 	platform_driver_unregister(&power_driver);
 	platform_device_unregister(&power_device);
+        wake_lock_destroy(&suspend_backoff_lock);
 	wake_lock_destroy(&unknown_wakeup);
 	wake_lock_destroy(&main_wake_lock);
     wake_lock_destroy(&prevent_idle_lock); //liuyijian 20110415 add
