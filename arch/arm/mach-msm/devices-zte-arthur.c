@@ -33,6 +33,7 @@
 
 #include <asm/mach/mmc.h>
 #include <mach/msm_hsusb.h>
+#include <mach/irqs.h>
 #ifdef CONFIG_PMIC8058
 #include <linux/mfd/pmic8058.h>
 #endif
