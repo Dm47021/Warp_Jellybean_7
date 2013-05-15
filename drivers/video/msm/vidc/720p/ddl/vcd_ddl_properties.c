@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -239,10 +239,6 @@ static u32 ddl_set_dec_property
 						&decoder->min_input_buf_req,
 						buffer_req))) {
 				decoder->client_input_buf_req = *buffer_req;
-				decoder->client_input_buf_req.min_count =
-					decoder->min_input_buf_req.min_count;
-				decoder->client_input_buf_req.max_count =
-					decoder->min_input_buf_req.max_count;
 				vcd_status = VCD_S_SUCCESS;
 			}
 			break;
@@ -259,10 +255,6 @@ static u32 ddl_set_dec_property
 						buffer_req))) {
 				decoder->client_output_buf_req =
 				    *buffer_req;
-				decoder->client_output_buf_req.min_count =
-					decoder->min_output_buf_req.min_count;
-				decoder->client_output_buf_req.max_count =
-					decoder->min_output_buf_req.max_count;
 				vcd_status = VCD_S_SUCCESS;
 			}
 			break;
@@ -412,10 +404,13 @@ static u32 ddl_set_enc_property(struct ddl_client_context *ddl,
 				(struct vcd_property_frame_size *)
 				property_value;
 
-			if ((sizeof(struct vcd_property_frame_size)
-				== property_hdr->sz) &&
-				(DDL_ALLOW_ENC_FRAMESIZE(framesize->width,
-				framesize->height))
+			if (sizeof(struct vcd_property_frame_size)
+				== property_hdr->sz &&
+				DDL_ALLOW_ENC_FRAMESIZE(framesize->width,
+				framesize->height) &&
+				(encoder->codec.codec == VCD_CODEC_H264 ||
+				 DDL_VALIDATE_ENC_FRAMESIZE(framesize->width,
+				 framesize->height))
 				) {
 				encoder->frame_size = *framesize;
 				ddl_calculate_stride(&encoder->frame_size,
@@ -795,10 +790,6 @@ static u32 ddl_set_enc_property(struct ddl_client_context *ddl,
 				&encoder->input_buf_req, buffer_req))
 				) {
 				encoder->client_input_buf_req = *buffer_req;
-				encoder->client_input_buf_req.min_count =
-					encoder->input_buf_req.min_count;
-				encoder->client_input_buf_req.max_count =
-					encoder->input_buf_req.max_count;
 				vcd_status = VCD_S_SUCCESS;
 			}
 			break;
@@ -815,10 +806,6 @@ static u32 ddl_set_enc_property(struct ddl_client_context *ddl,
 				) {
 				encoder->client_output_buf_req =
 					*buffer_req;
-				encoder->client_output_buf_req.min_count =
-					encoder->output_buf_req.min_count;
-				encoder->client_output_buf_req.max_count =
-					encoder->output_buf_req.max_count;
 				vcd_status = VCD_S_SUCCESS;
 			}
 			break;
@@ -848,12 +835,24 @@ static u32 ddl_get_dec_property
 	switch (property_hdr->prop_id) {
 	case VCD_I_FRAME_SIZE:
 		{
+			struct vcd_property_frame_size *fz_size;
 			if (sizeof(struct vcd_property_frame_size) ==
 			    property_hdr->sz) {
 					ddl_calculate_stride(
 					&decoder->client_frame_size,
 					!decoder->progressive_only,
 					decoder->codec.codec);
+					if (decoder->buf_format.buffer_format
+                                                == VCD_BUFFER_FORMAT_TILE_4x2) {
+                                                fz_size =
+                                                &decoder->client_frame_size;
+                                                fz_size->stride =
+                                                DDL_TILE_ALIGN(fz_size->width,
+                                                        DDL_TILE_ALIGN_WIDTH);
+                                                fz_size->scan_lines =
+                                                DDL_TILE_ALIGN(fz_size->height,
+                                                        DDL_TILE_ALIGN_HEIGHT);
+                                        }
 					*(struct vcd_property_frame_size *)
 					    property_value =
 					    decoder->client_frame_size;
@@ -894,10 +893,15 @@ static u32 ddl_get_dec_property
 		{
 			if (sizeof(struct vcd_buffer_requirement) ==
 			    property_hdr->sz) {
-				*(struct vcd_buffer_requirement *)
-				    property_value =
-						decoder->client_input_buf_req;
-				vcd_status = VCD_S_SUCCESS;
+				if (decoder->
+						client_input_buf_req.sz) {
+					*(struct vcd_buffer_requirement *)
+					    property_value =
+					    decoder->client_input_buf_req;
+					vcd_status = VCD_S_SUCCESS;
+				} else {
+					vcd_status = VCD_ERR_ILLEGAL_OP;
+				}
 			}
 			break;
 		}
@@ -905,10 +909,14 @@ static u32 ddl_get_dec_property
 		{
 			if (sizeof(struct vcd_buffer_requirement) ==
 			    property_hdr->sz) {
-				*(struct vcd_buffer_requirement *)
-				    property_value =
-						decoder->client_output_buf_req;
-				vcd_status = VCD_S_SUCCESS;
+				if (decoder->client_output_buf_req.sz) {
+					*(struct vcd_buffer_requirement *)
+					    property_value =
+					    decoder->client_output_buf_req;
+					vcd_status = VCD_S_SUCCESS;
+				} else {
+					vcd_status = VCD_ERR_ILLEGAL_OP;
+				}
 			}
 			break;
 		}
@@ -916,9 +924,14 @@ static u32 ddl_get_dec_property
 		{
 			if (sizeof(struct vcd_property_codec) ==
 			    property_hdr->sz) {
-				*(struct vcd_property_codec *)
-				    property_value = decoder->codec;
-				vcd_status = VCD_S_SUCCESS;
+				if (decoder->codec.codec) {
+					*(struct vcd_property_codec *)
+					    property_value =
+					    decoder->codec;
+					vcd_status = VCD_S_SUCCESS;
+				} else {
+					vcd_status = VCD_ERR_ILLEGAL_OP;
+				}
 			}
 			break;
 		}
@@ -953,7 +966,9 @@ static u32 ddl_get_dec_property
 		}
 	case DDL_I_FRAME_PROC_UNITS:
 		{
-			if (sizeof(u32) == property_hdr->sz) {
+			if (sizeof(u32) == property_hdr->sz &&
+			    decoder->client_frame_size.width &&
+			    decoder->client_frame_size.height) {
 				struct vcd_property_frame_size frame_sz =
 					decoder->client_frame_size;
 				ddl_calculate_stride(&frame_sz,
@@ -1271,10 +1286,14 @@ static u32 ddl_get_enc_property
 		{
 			if (sizeof(struct vcd_buffer_requirement) ==
 			    property_hdr->sz) {
-				*(struct vcd_buffer_requirement *)
-				    property_value =
-						encoder->client_input_buf_req;
-				vcd_status = VCD_S_SUCCESS;
+				if (encoder->output_buf_req.sz) {
+					*(struct vcd_buffer_requirement *)
+					    property_value =
+					    encoder->client_input_buf_req;
+					vcd_status = VCD_S_SUCCESS;
+				} else {
+					vcd_status = VCD_ERR_ILLEGAL_OP;
+				}
 			}
 			break;
 		}
@@ -1282,10 +1301,14 @@ static u32 ddl_get_enc_property
 		{
 			if (sizeof(struct vcd_buffer_requirement) ==
 			    property_hdr->sz) {
-				*(struct vcd_buffer_requirement *)
-				    property_value =
-						encoder->client_output_buf_req;
-				vcd_status = VCD_S_SUCCESS;
+				if (encoder->output_buf_req.sz) {
+					*(struct vcd_buffer_requirement *)
+					    property_value =
+					    encoder->client_output_buf_req;
+					vcd_status = VCD_S_SUCCESS;
+				} else {
+					vcd_status = VCD_ERR_ILLEGAL_OP;
+				}
 			}
 			break;
 		}
@@ -1301,7 +1324,9 @@ static u32 ddl_get_enc_property
 		}
 	case DDL_I_FRAME_PROC_UNITS:
 		{
-			if (sizeof(u32) == property_hdr->sz) {
+			if (sizeof(u32) == property_hdr->sz &&
+			    encoder->frame_size.width &&
+			    encoder->frame_size.height) {
 				*(u32 *) property_value =
 				    ((encoder->frame_size.width >> 4) *
 				     (encoder->frame_size.height >> 4)
@@ -1359,8 +1384,7 @@ static u32 ddl_set_enc_dynamic_property
 				(struct vcd_property_target_bitrate *)
 				property_value;
 			if (sizeof(struct vcd_property_target_bitrate) ==
-			 property_hdr->sz && bitrate->target_bitrate > 0
-			 && bitrate->target_bitrate <= DDL_MAX_BIT_RATE) {
+			 property_hdr->sz) {
 				encoder->target_bit_rate = *bitrate;
 				dynamic_prop_change = DDL_ENC_CHANGE_BITRATE;
 				vcd_status = VCD_S_SUCCESS;
@@ -1521,12 +1545,9 @@ static void ddl_set_default_enc_level(struct ddl_encoder_data *encoder)
 static void ddl_set_default_enc_vop_timing
     (struct ddl_encoder_data *encoder)
 {
-	if (encoder->codec.codec == VCD_CODEC_MPEG4)
-		encoder->vop_timing.vop_time_resolution =
-		    (2 * encoder->frame_rate.fps_numerator) /
-		    encoder->frame_rate.fps_denominator;
-	else
-		encoder->vop_timing.vop_time_resolution = 0x7530;
+	encoder->vop_timing.vop_time_resolution =
+	    (2 * encoder->frame_rate.fps_numerator) /
+	    encoder->frame_rate.fps_denominator;
 }
 
 static void ddl_set_default_enc_intra_period(
