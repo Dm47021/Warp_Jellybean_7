@@ -575,54 +575,5 @@ extern int vt_ioctl(struct tty_struct *tty, struct file *file,
 extern long vt_compat_ioctl(struct tty_struct *tty, struct file * file,
 		     unsigned int cmd, unsigned long arg);
 
-/* tty_mutex.c */
-/* functions for preparation of BKL removal */
-extern void __lockfunc tty_lock(void) __acquires(tty_lock);
-extern void __lockfunc tty_unlock(void) __releases(tty_lock);
-extern struct task_struct *__big_tty_mutex_owner;
-#define tty_locked()		(current == __big_tty_mutex_owner)
-
-/*
- * wait_event_interruptible_tty -- wait for a condition with the tty lock held
- *
- * The condition we are waiting for might take a long time to
- * become true, or might depend on another thread taking the
- * BTM. In either case, we need to drop the BTM to guarantee
- * forward progress. This is a leftover from the conversion
- * from the BKL and should eventually get removed as the BTM
- * falls out of use.
- *
- * Do not use in new code.
- */
-#define wait_event_interruptible_tty(wq, condition)			\
-({									\
-	int __ret = 0;							\
-	if (!(condition)) {						\
-		__wait_event_interruptible_tty(wq, condition, __ret);	\
-	}								\
-	__ret;								\
-})
-
-#define __wait_event_interruptible_tty(wq, condition, ret)		\
-do {									\
-	DEFINE_WAIT(__wait);						\
-									\
-	for (;;) {							\
-		prepare_to_wait(&wq, &__wait, TASK_INTERRUPTIBLE);	\
-		if (condition)						\
-			break;						\
-		if (!signal_pending(current)) {				\
-			tty_unlock();					\
-			schedule();					\
-			tty_lock();					\
-			continue;					\
-		}							\
-		ret = -ERESTARTSYS;					\
-		break;							\
-	}								\
-	finish_wait(&wq, &__wait);					\
-} while (0)
-
-
 #endif /* __KERNEL__ */
 #endif
