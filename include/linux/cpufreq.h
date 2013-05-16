@@ -370,15 +370,6 @@ extern struct cpufreq_governor cpufreq_gov_ondemand;
 extern struct cpufreq_governor cpufreq_gov_conservative;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_conservative)
 #endif
-#ifdef CONFIG_CPU_FREQ_GOV_DARKSIDE
-extern struct cpufreq_governor cpufreq_gov_darkside;
-#endif
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_darkside)
-#elif defined(CONFIG_CPU_FREQ_DEFAULT_GOV_DARKSIDE)
-extern struct cpufreq_governor cpufreq_gov_darkside;
-#define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_darkside)
-#endif
-
 
 
 /*********************************************************************
@@ -439,3 +430,4 @@ extern void cpufreq_debug_printk(unsigned int type, const char *prefix,
 
 #endif /* CONFIG_CPU_FREQ_DEBUG */
 
+#endif /* _LINUX_CPUFREQ_H */
