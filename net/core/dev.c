@@ -2105,7 +2105,7 @@ static inline int __dev_xmit_skb(struct sk_buff *skb, struct Qdisc *q,
 static inline int skb_needs_linearize(struct sk_buff *skb,
 				      struct net_device *dev)
 {
-	return (skb_has_frag_list(skb) && !(dev->features & NETIF_F_FRAGLIST)) ||
+	return (skb_has_frags(skb) && !(dev->features & NETIF_F_FRAGLIST)) ||
 	       (skb_shinfo(skb)->nr_frags && (!(dev->features & NETIF_F_SG) ||
 					      illegal_highdma(dev, skb)));
 }
@@ -3069,7 +3069,7 @@ enum gro_result dev_gro_receive(struct napi_struct *napi, struct sk_buff *skb)
 	if (!(skb->dev->features & NETIF_F_GRO) || netpoll_rx_on(skb))
 		goto normal;
 
-	if (skb_is_gso(skb) || skb_has_frag_list(skb))
+	if (skb_is_gso(skb) || skb_has_frags(skb))
 		goto normal;
 
 	rcu_read_lock();
