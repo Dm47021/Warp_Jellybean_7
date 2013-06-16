@@ -1,15 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-<<<<<<< HEAD
-<<<<<<< HEAD
-# Sun Jun 16 15:56:42 2013
-=======
-# Thu Feb 28 13:19:09 2013
->>>>>>> parent of 70644e6... Net/Bluetooth: Backport from msm-3.0.8, prep for future backports
-=======
-# Sat Apr  6 22:30:36 2013
->>>>>>> parent of 94e99a0... Drivers/Bluetooth: backport from msm-3.0.8
+# Sun Jun 16 19:43:47 2013
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -840,9 +832,6 @@ CONFIG_IP6_NF_MANGLE=y
 # CONFIG_IP6_NF_SECURITY is not set
 # CONFIG_IP_DCCP is not set
 # CONFIG_IP_SCTP is not set
-# CONFIG_SCTP_HMAC_NONE is not set
-# CONFIG_SCTP_HMAC_SHA1 is not set
-# CONFIG_SCTP_HMAC_MD5 is not set
 # CONFIG_RDS is not set
 # CONFIG_TIPC is not set
 # CONFIG_ATM is not set
@@ -929,9 +918,12 @@ CONFIG_BT=y
 CONFIG_BT_L2CAP=y
 # CONFIG_BT_L2CAP_EXT_FEATURES is not set
 CONFIG_BT_SCO=y
-# CONFIG_BT_RFCOMM is not set
-# CONFIG_BT_BNEP is not set
-# CONFIG_BT_HIDP is not set
+CONFIG_BT_RFCOMM=y
+CONFIG_BT_RFCOMM_TTY=y
+CONFIG_BT_BNEP=y
+CONFIG_BT_BNEP_MC_FILTER=y
+CONFIG_BT_BNEP_PROTO_FILTER=y
+CONFIG_BT_HIDP=y
 
 #
 # Bluetooth device drivers
@@ -974,7 +966,7 @@ CONFIG_WIRELESS_EXT_SYSFS=y
 # CONFIG_WIMAX is not set
 CONFIG_RFKILL=y
 CONFIG_RFKILL_PM=y
-# CONFIG_RFKILL_INPUT is not set
+CONFIG_RFKILL_INPUT=y
 # CONFIG_NET_9P is not set
 # CONFIG_CAIF is not set
 
@@ -1493,10 +1485,6 @@ CONFIG_I2C_SSBI=y
 #
 CONFIG_SENSORS_TSL2771=y
 # CONFIG_SENSORS_BH1721 is not set
-<<<<<<< HEAD
-CONFIG_SENSORS_AKM8962C=y
-=======
->>>>>>> parent of 94e99a0... Drivers/Bluetooth: backport from msm-3.0.8
 CONFIG_SENSORS_AKM8962=y
 CONFIG_SENSORS_LIS302DL=y
 CONFIG_SENSORS_ADXL34X=y
@@ -2024,6 +2012,9 @@ CONFIG_UHID=y
 #
 # Special HID drivers
 #
+# CONFIG_HID_APPLE is not set
+# CONFIG_HID_MAGICMOUSE is not set
+# CONFIG_HID_WACOM is not set
 CONFIG_USB_SUPPORT=y
 CONFIG_USB_ARCH_HAS_HCD=y
 # CONFIG_USB_ARCH_HAS_OHCI is not set
