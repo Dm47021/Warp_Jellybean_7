@@ -586,7 +586,7 @@ static int bluesleep_write_proc_proto(struct file *file, const char *buffer,
 	return count;
 }
 
-static int __devinit bcmsleep_probe(struct platform_device *pdev)
+static int __init bcmsleep_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct resource *res;
@@ -603,7 +603,7 @@ static int __devinit bcmsleep_probe(struct platform_device *pdev)
 		goto free_bsi;
 	}
 	bsi->host_wake = res->start;
-/*
+
 	ret = gpio_request(bsi->host_wake, "bt_host_wake");
 	if (ret)
 		goto free_bsi;
@@ -611,7 +611,6 @@ static int __devinit bcmsleep_probe(struct platform_device *pdev)
 	if (ret)
 		goto free_bt_host_wake;
 
-*/
 	res = platform_get_resource_byname(pdev, IORESOURCE_IO,
 				"gpio_ext_wake");
 	if (!res) {
@@ -620,7 +619,7 @@ static int __devinit bcmsleep_probe(struct platform_device *pdev)
 		goto free_bt_host_wake;
 	}
 	bsi->ext_wake = res->start;
-/*
+
 	ret = gpio_request(bsi->ext_wake, "bt_ext_wake");
 	if (ret)
 		goto free_bt_host_wake;
@@ -628,7 +627,7 @@ static int __devinit bcmsleep_probe(struct platform_device *pdev)
 	ret = gpio_direction_output(bsi->ext_wake, 0);
 	if (ret)
 		goto free_bt_ext_wake;
-*/
+
 	bsi->host_wake_irq = platform_get_irq_byname(pdev, "host_wake");
 	if (bsi->host_wake_irq < 0) {
 		BT_ERR("couldn't find host_wake irq\n");
@@ -668,7 +667,7 @@ static int bcmsleep_remove(struct platform_device *pdev)
 }
 
 static struct platform_driver bcmsleep_driver = {
-	.probe = bcmsleep_probe,
+	//.probe = bcmsleep_probe,
 	.remove = bcmsleep_remove,
 	.driver = {
 		.name = "bcmsleep",
@@ -687,7 +686,7 @@ static int __init bcmsleep_init(void)
 
 	BT_INFO("BCM Sleep Mode Driver Ver %s", VERSION);
 
-	retval = platform_driver_register(&bcmsleep_driver);
+	retval = platform_driver_probe(&bcmsleep_driver,bcmsleep_probe);
 	if (retval)
 		return retval;
 

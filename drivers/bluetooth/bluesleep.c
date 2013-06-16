@@ -23,6 +23,7 @@
 				 Sleep-Mode Protocol from the Host side
    2006-Sep-08  Motorola         Added workqueue for handling sleep work.
    2007-Jan-24  Motorola         Added mbm_handle_ioi() call to ISR.
+   2010-12-03   qxx          add for display BTInfo on Engineering Mode       ZTE_BT_QXX_20101203
 
 */
 
@@ -552,6 +553,26 @@ static int bluesleep_write_proc_proto(struct file *file, const char *buffer,
 	return count;
 }
 
+//add for display BTInfo on Engineering Mode ZTE_BT_QXX_20101203 begin
+
+static int msm_btinfo_read_proc(
+        char *page, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+ 
+  printk("[qxx]:msm_btinfo_read_proc===========\n");
+	len = sprintf(page, "%s\n","QTR8x00");
+	return len;
+
+}
+
+static int msm_btinfo_write_proc(struct file *file, const char __user *buffer,
+			     unsigned long count, void *data)
+{
+	return 1;
+}
+
+//add for display BTInfo on Engineering Mode ZTE_BT_QXX_20101203 end
 static int __init bluesleep_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -706,7 +727,21 @@ static int __init bluesleep_init(void)
 	}
 
 	flags = 0; /* clear all status bits */
+	//add for display BTInfo on Engineering Mode ZTE_BT_QXX_20101203 begin
+	
+	ent = create_proc_entry("msm_btinfo", 0, NULL);
+  if (ent) {
+     ent->read_proc = msm_btinfo_read_proc;
+     ent->write_proc = msm_btinfo_write_proc;
+     ent->data = NULL;
+  }
+  else
+  {
+  	BT_ERR("[qxx]Unable to create /proc/msm_btinfo");
+  	remove_proc_entry("msm_btinfo", 0);
+  }
 
+  //add for display BTInfo on Engineering Mode ZTE_BT_QXX_20101203 end
 	/* Initialize spinlock. */
 	spin_lock_init(&rw_lock);
 
@@ -746,6 +781,7 @@ static void __exit bluesleep_exit(void)
 	remove_proc_entry("btwake", sleep_dir);
 	remove_proc_entry("sleep", bluetooth_dir);
 	remove_proc_entry("bluetooth", 0);
+	remove_proc_entry("msm_btinfo", 0);
 }
 
 module_init(bluesleep_init);
