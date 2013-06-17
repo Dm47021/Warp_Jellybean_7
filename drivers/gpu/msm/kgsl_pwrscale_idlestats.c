@@ -219,4 +219,3 @@ struct kgsl_pwrscale_policy kgsl_pwrscale_policy_idlestats = {
 	.sleep = idlestats_sleep,
 	.close = idlestats_close
 };
-

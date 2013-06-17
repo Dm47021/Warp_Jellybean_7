@@ -798,4 +798,3 @@ static void destroy_channel(void)
 	}
 }
 
-

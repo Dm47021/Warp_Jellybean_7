@@ -1,5 +1,4 @@
 /* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
- * Copyright (C) 2011 Sony Ericsson Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,8 +21,6 @@
 #include "kgsl_mmu.h"
 #include "kgsl_device.h"
 #include "kgsl_sharedmem.h"
-
-#include "adreno_ringbuffer.h"
 
 static ssize_t
 sysfs_show_ptpool_entries(struct kobject *kobj,
@@ -765,4 +762,3 @@ struct kgsl_mmu_pt_ops gpummu_pt_ops = {
 	.mmu_pt_equal = kgsl_gpummu_pt_equal,
 	.mmu_pt_get_flags = kgsl_gpummu_pt_get_flags,
 };
-

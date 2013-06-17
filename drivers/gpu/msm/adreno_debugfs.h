@@ -38,4 +38,3 @@ static inline int kgsl_pmregs_enabled(void)
 #endif
 
 #endif /* __ADRENO_DEBUGFS_H */
-

@@ -76,16 +76,10 @@ struct kgsl_device;
 #define MH_INTERRUPT_MASK__AXI_WRITE_ERROR                 0x00000002L
 #define MH_INTERRUPT_MASK__MMU_PAGE_FAULT                  0x00000004L
 
-#ifdef CONFIG_MSM_KGSL_MMU
 #define KGSL_MMU_INT_MASK \
 	(MH_INTERRUPT_MASK__AXI_READ_ERROR | \
 	 MH_INTERRUPT_MASK__AXI_WRITE_ERROR | \
 	 MH_INTERRUPT_MASK__MMU_PAGE_FAULT)
-#else
-#define KGSL_MMU_INT_MASK \
-	(MH_INTERRUPT_MASK__AXI_READ_ERROR | \
-	 MH_INTERRUPT_MASK__AXI_WRITE_ERROR)
-#endif
 
 enum kgsl_mmutype {
 	KGSL_MMU_TYPE_GPU = 0,
@@ -191,4 +185,3 @@ void kgsl_mmu_set_mmutype(char *mmutype);
 unsigned int kgsl_mmu_get_current_ptbase(struct kgsl_device *device);
 enum kgsl_mmutype kgsl_mmu_get_mmutype(void);
 #endif /* __KGSL_MMU_H */
-

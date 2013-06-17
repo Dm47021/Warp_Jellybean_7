@@ -199,9 +199,6 @@ void adreno_drawctxt_destroy(struct kgsl_device *device,
 
 	adreno_idle(device, KGSL_TIMEOUT_DEFAULT);
 
-        if (adreno_is_a20x(adreno_dev))
-          kgsl_setstate(device, KGSL_MMUFLAGS_PTUPDATE);
-
 	kgsl_sharedmem_free(&drawctxt->gpustate);
 	kgsl_sharedmem_free(&drawctxt->context_gmem_shadow.gmemshadow);
 
@@ -267,4 +264,3 @@ void adreno_drawctxt_switch(struct adreno_device *adreno_dev,
 	adreno_dev->drawctxt_active = drawctxt;
 	adreno_dev->gpudev->ctxt_restore(adreno_dev, drawctxt);
 }
-
