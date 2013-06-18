@@ -1909,13 +1909,13 @@ static const struct {
 	KGSL_IOCTL_FUNC(IOCTL_KGSL_CFF_USER_EVENT,
 			kgsl_ioctl_cff_user_event, 0),
 	KGSL_IOCTL_FUNC(IOCTL_KGSL_TIMESTAMP_EVENT,
-			kgsl_ioctl_timestamp_event, 1),
+			kgsl_ioctl_timestamp_event, 0),
 };
 
 static long kgsl_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
 	struct kgsl_device_private *dev_priv = filep->private_data;
-	unsigned int nr;
+	unsigned int nr = _IOC_NR(cmd);
 	kgsl_ioctl_func_t func;
 	int lock, ret;
 	char ustack[64];
@@ -1930,8 +1930,6 @@ static long kgsl_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		cmd = IOCTL_KGSL_CMDSTREAM_FREEMEMONTIMESTAMP;
 	else if (cmd == IOCTL_KGSL_CMDSTREAM_READTIMESTAMP_OLD)
 		cmd = IOCTL_KGSL_CMDSTREAM_READTIMESTAMP;
-    
-  nr = _IOC_NR(cmd);  
 
 	if (cmd & (IOC_IN | IOC_OUT)) {
 		if (_IOC_SIZE(cmd) < sizeof(ustack))
@@ -1956,17 +1954,8 @@ static long kgsl_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 			memset(uptr, 0, _IOC_SIZE(cmd));
 	}
 
-  if (nr < ARRAY_SIZE(kgsl_ioctl_funcs) && kgsl_ioctl_funcs[nr].func != NULL) {
-        /*
-         * Make sure that nobody tried to send us a malformed ioctl code
-         * with a valid NR but bogus flags
-         */
-        if (kgsl_ioctl_funcs[nr].cmd != cmd) {
-            KGSL_DRV_ERR(dev_priv->device, "Malformed ioctl code %08x\n", cmd);
-            ret = -ENOIOCTLCMD;
-            goto done;
-        }
-  
+	if (nr < ARRAY_SIZE(kgsl_ioctl_funcs) &&
+	    kgsl_ioctl_funcs[nr].func != NULL) {
 		func = kgsl_ioctl_funcs[nr].func;
 		lock = kgsl_ioctl_funcs[nr].lock;
 	} else {
